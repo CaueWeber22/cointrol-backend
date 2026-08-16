@@ -3,8 +3,9 @@ package com.fcproject.application.core.usecases.users;
 import com.fcproject.application.core.domain.users.UserDomain;
 import com.fcproject.application.ports.inbound.userPorts.FindUserByEmailInPort;
 import com.fcproject.application.ports.outbound.UserOutPort;
+import com.fcproject.application.core.exceptions.ResourceNotFoundException;
 
-import static com.fcproject.application.core.utils.UserValidationUtil.emailValidationUtil;
+import static com.fcproject.application.core.utils.UserValidationUtil.normalizeEmail;
 
 public class FindUserByEmailUsecase implements FindUserByEmailInPort {
     private final UserOutPort userOutPort;
@@ -15,10 +16,8 @@ public class FindUserByEmailUsecase implements FindUserByEmailInPort {
 
     @Override
     public UserDomain execute(String email) {
-        emailValidationUtil(email);
-        email = email.trim().toLowerCase();
-
-        return userOutPort.findByEmail(email);
+        return userOutPort.findByEmail(normalizeEmail(email))
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
 }

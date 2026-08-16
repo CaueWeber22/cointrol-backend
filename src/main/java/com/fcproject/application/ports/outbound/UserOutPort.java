@@ -3,11 +3,14 @@ package com.fcproject.application.ports.outbound;
 import com.fcproject.application.core.domain.users.UserDomain;
 
 import java.util.UUID;
+import java.util.Optional;
 
 public interface UserOutPort {
-        UserDomain findByEmail(String email);
+        Optional<UserDomain> findByEmail(String email);
 
-        void save(UserDomain user);
+        boolean existsByEmail(String email);
 
-        UserDomain findById(UUID id);
+        UserDomain save(UserDomain user, String passwordHash);
+
+        Optional<UserDomain> findById(UUID id);
 }

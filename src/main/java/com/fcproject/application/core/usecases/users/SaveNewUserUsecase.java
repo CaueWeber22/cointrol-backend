@@ -1,47 +1,74 @@
 package com.fcproject.application.core.usecases.users;
 
+import com.fcproject.application.core.commands.CreateUserCommand;
 import com.fcproject.application.core.domain.users.UserDomain;
+import com.fcproject.application.core.exceptions.RequiredFieldException;
+import com.fcproject.application.core.exceptions.UserAlreadyExistsException;
 import com.fcproject.application.ports.inbound.userPorts.SaveNewUserInPort;
+import com.fcproject.application.ports.outbound.PasswordHasherOutPort;
 import com.fcproject.application.ports.outbound.UserOutPort;
-import com.fcproject.infrastructure.exceptions.global.NotAllFieldsFilledException;
-import com.fcproject.infrastructure.exceptions.user.UserAlreadyExistsException;
 
-import static com.fcproject.application.core.utils.UserValidationUtil.emailValidationUtil;
+import java.time.LocalDate;
+
+import static com.fcproject.application.core.utils.UserValidationUtil.normalizeEmail;
 import static com.fcproject.application.core.utils.UserValidationUtil.passwordValidationUtil;
 
 public class SaveNewUserUsecase implements SaveNewUserInPort {
     private final UserOutPort repositoryOut;
+    private final PasswordHasherOutPort passwordHasher;
 
-    public SaveNewUserUsecase(UserOutPort repositoryOut) {
+    public SaveNewUserUsecase(UserOutPort repositoryOut, PasswordHasherOutPort passwordHasher) {
         this.repositoryOut = repositoryOut;
+        this.passwordHasher = passwordHasher;
     }
 
     @Override
-    public void execute(UserDomain user) {
+    public UserDomain execute(CreateUserCommand command) {
+        if (command == null) {
+            throw new RequiredFieldException("User data must be provided");
+        }
 
-        userValidation(user);
-        user.setEmail(user.getEmail().trim().toLowerCase());
+        String normalizedEmail = normalizeEmail(command.email());
+        userValidation(command, normalizedEmail);
 
-        repositoryOut.save(user);
+        UserDomain user = new UserDomain(
+                null,
+                command.firstName().trim(),
+                command.lastName().trim(),
+                normalizedEmail,
+                command.phone().trim(),
+                command.gender(),
+                command.dateOfBirth()
+        );
+
+        return repositoryOut.save(user, passwordHasher.hash(command.password()));
     }
 
-    public void userValidation(UserDomain user) {
-        emailValidationUtil(user.getEmail());
-        passwordValidationUtil(user.getPassword());
+    private void userValidation(CreateUserCommand command, String normalizedEmail) {
+        passwordValidationUtil(command.password());
 
-        requireNotBlank(user.getFirstName(), "First Name");
-        requireNotBlank(user.getLastName(), "Last Name");
-        requireNotBlank(user.getPhone(), "Phone");
+        requireNotBlank(command.firstName(), "First name");
+        requireNotBlank(command.lastName(), "Last name");
+        requireNotBlank(command.phone(), "Phone");
+        if (command.gender() == null) {
+            throw new RequiredFieldException("Gender must be provided");
+        }
+        if (command.dateOfBirth() == null) {
+            throw new RequiredFieldException("Date of birth must be provided");
+        }
+        if (command.dateOfBirth().isAfter(LocalDate.now())) {
+            throw new com.fcproject.application.core.exceptions.InvalidValueException("Date of birth cannot be in the future");
+        }
 
-        if (repositoryOut.findByEmail(user.getEmail()) != null) {
-                throw new UserAlreadyExistsException("An user with this e-mail already exists");
+        if (repositoryOut.existsByEmail(normalizedEmail)) {
+            throw new UserAlreadyExistsException("A user with this e-mail already exists");
         }
     }
 
 
     private void requireNotBlank(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            throw new NotAllFieldsFilledException(fieldName + " must be filled");
+            throw new RequiredFieldException(fieldName + " must be filled");
         }
     }
 

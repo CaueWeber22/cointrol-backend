@@ -1,0 +1,7 @@
+package com.fcproject.application.core.exceptions;
+
+public class ResourceNotFoundException extends RuntimeException {
+    public ResourceNotFoundException(String message) {
+        super(message);
+    }
+}

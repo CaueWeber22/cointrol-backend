@@ -1,6 +1,6 @@
 package com.fcproject.application.core.enums;
 
-import com.fcproject.infrastructure.exceptions.global.InvalidValueException;
+import com.fcproject.application.core.exceptions.InvalidValueException;
 
 public enum Gender {
     MALE,

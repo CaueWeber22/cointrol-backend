@@ -2,12 +2,12 @@ package com.fcproject.adapters.outbound.mappers;
 
 import com.fcproject.adapters.outbound.entities.users.UserEntity;
 import com.fcproject.application.core.domain.users.UserDomain;
-import lombok.experimental.UtilityClass;
 
-@UtilityClass
-public class UserMapper {
+public final class UserMapper {
+    private UserMapper() {
+    }
 
-    public UserDomain toDomain(UserEntity entity) {
+    public static UserDomain toDomain(UserEntity entity) {
         if (entity == null) {
             return null;
         }
@@ -23,9 +23,9 @@ public class UserMapper {
         );
     }
 
-    public UserEntity toEntity(UserDomain domain) {
+    public static UserEntity toEntity(UserDomain domain, String passwordHash) {
         if (domain == null) {
-            return null;
+            throw new IllegalArgumentException("User domain must be provided");
         }
 
         return new UserEntity(
@@ -35,7 +35,7 @@ public class UserMapper {
                 domain.getPhone(),
                 domain.getGender(),
                 domain.getDateOfBirth(),
-                domain.getPassword()
+                passwordHash
         );
     }
 }

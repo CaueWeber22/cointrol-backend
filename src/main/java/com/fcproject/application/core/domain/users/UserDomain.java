@@ -6,17 +6,13 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public class UserDomain {
-    private UUID id;
-    private String firstName;
-    private String lastName;
-    private String email;
-    private String password;
-    private String phone;
-    private Gender gender;
-    private LocalDate dateOfBirth;
-
-    public UserDomain() {
-    }
+    private final UUID id;
+    private final String firstName;
+    private final String lastName;
+    private final String email;
+    private final String phone;
+    private final Gender gender;
+    private final LocalDate dateOfBirth;
 
     public UserDomain(UUID id, String firstName, String lastName, String email, String phone, Gender gender, LocalDate dateOfBirth) {
         this.id = id;
@@ -32,64 +28,28 @@ public class UserDomain {
         return id;
     }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
     public String getFirstName() {
         return firstName;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
     }
 
     public String getLastName() {
         return lastName;
     }
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
     public String getEmail() {
         return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public String getPhone() {
         return phone;
     }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
     public Gender getGender() {
         return gender;
     }
 
-    public void setGender(Gender gender) {
-        this.gender = gender;
-    }
-
     public LocalDate getDateOfBirth() {
         return dateOfBirth;
-    }
-
-    public void setBirthDay(LocalDate birthDay) {
-        this.dateOfBirth = birthDay;
     }
 
 }
