@@ -2,12 +2,15 @@ package com.fcproject.infrastructure.exceptions;
 
 import com.fcproject.application.core.exceptions.InvalidRefreshTokenException;
 import com.fcproject.application.core.exceptions.InvalidValueException;
+import com.fcproject.application.core.exceptions.BusinessConflictException;
+import com.fcproject.application.core.exceptions.BusinessRuleException;
 import com.fcproject.application.core.exceptions.RequiredFieldException;
 import com.fcproject.application.core.exceptions.ResourceNotFoundException;
 import com.fcproject.application.core.exceptions.UserAlreadyExistsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -31,6 +34,26 @@ public class GlobalHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler({RequiredFieldException.class, InvalidValueException.class})
     ResponseEntity<ProblemDetail> handleBadRequest(RuntimeException exception) {
         return response(HttpStatus.BAD_REQUEST, "Invalid request", exception.getMessage(), "INVALID_REQUEST");
+    }
+
+    @ExceptionHandler(BusinessRuleException.class)
+    ResponseEntity<ProblemDetail> handleBusinessRule(BusinessRuleException exception) {
+        return response(HttpStatus.BAD_REQUEST, "Invalid request", exception.getMessage(), exception.getCode());
+    }
+
+    @ExceptionHandler(BusinessConflictException.class)
+    ResponseEntity<ProblemDetail> handleBusinessConflict(BusinessConflictException exception) {
+        return response(HttpStatus.CONFLICT, "Resource conflict", exception.getMessage(), exception.getCode());
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    ResponseEntity<ProblemDetail> handleOptimisticLock(ObjectOptimisticLockingFailureException exception) {
+        return response(
+                HttpStatus.CONFLICT,
+                "Concurrent modification",
+                "The resource was changed by another request",
+                "CONCURRENT_MODIFICATION"
+        );
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)

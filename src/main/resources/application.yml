@@ -10,7 +10,7 @@ spring:
     enabled: true
     create-schemas: true
     default-schema: access
-    schemas: access
+    schemas: access,finance
   jpa:
     open-in-view: false
     hibernate:

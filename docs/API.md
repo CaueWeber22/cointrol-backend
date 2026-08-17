@@ -90,6 +90,151 @@ Resposta: `204 No Content`. A operação é idempotente para tokens já revogado
 
 Requer access token válido. Retorna o mesmo contrato público de usuário do cadastro.
 
+## Contas financeiras
+
+Todos os endpoints desta seção exigem access token. O proprietário é obtido do token e não deve ser enviado no payload.
+
+### Criar conta
+
+`POST /api/v1/accounts`
+
+```json
+{
+  "name": "Conta principal",
+  "type": "CHECKING",
+  "currency": "BRL",
+  "openingBalance": 1500.00
+}
+```
+
+`openingBalance` é opcional. Quando informado, é persistido atomicamente como lançamento `OPENING_BALANCE`; não existe campo de saldo editável.
+
+Tipos: `CHECKING`, `SAVINGS`, `CASH` e `INVESTMENT`.
+
+Resposta `201 Created`, com `Location: /api/v1/accounts/{id}`.
+
+### Consultar e manter contas
+
+| Método | Endpoint | Função |
+|---|---|---|
+| `GET` | `/api/v1/accounts?status=ACTIVE` | Lista contas, opcionalmente por `ACTIVE` ou `ARCHIVED`. |
+| `GET` | `/api/v1/accounts/{id}` | Retorna uma conta do usuário. |
+| `PATCH` | `/api/v1/accounts/{id}` | Renomeia usando `{"name":"Novo nome"}`. |
+| `DELETE` | `/api/v1/accounts/{id}` | Arquiva de forma idempotente e retorna `204`. |
+| `GET` | `/api/v1/accounts/{id}/balance` | Retorna saldos confirmado, pendente e projetado. |
+
+Exemplo de saldo:
+
+```json
+{
+  "accountId": "20000000-0000-0000-0000-000000000001",
+  "currency": "BRL",
+  "cleared": 1250.0000,
+  "pending": -100.0000,
+  "projected": 1150.0000
+}
+```
+
+## Categorias
+
+### Criar categoria
+
+`POST /api/v1/categories`
+
+```json
+{
+  "name": "Supermercado",
+  "kind": "EXPENSE"
+}
+```
+
+`kind` aceita `INCOME` ou `EXPENSE`. Resposta `201 Created` com `Location`.
+
+| Método | Endpoint | Função |
+|---|---|---|
+| `GET` | `/api/v1/categories?kind=EXPENSE&status=ACTIVE` | Lista com filtros opcionais. |
+| `PATCH` | `/api/v1/categories/{id}` | Renomeia a categoria. |
+| `DELETE` | `/api/v1/categories/{id}` | Arquiva e retorna `204`. |
+
+Categorias arquivadas permanecem vinculadas ao histórico, mas não podem ser usadas em novos lançamentos.
+
+## Lançamentos financeiros
+
+### Criar receita ou despesa
+
+`POST /api/v1/transactions`
+
+Header obrigatório:
+
+```text
+Idempotency-Key: entry-2026-08-16-001
+```
+
+```json
+{
+  "accountId": "20000000-0000-0000-0000-000000000001",
+  "categoryId": "30000000-0000-0000-0000-000000000001",
+  "type": "EXPENSE",
+  "amount": 149.90,
+  "status": "CLEARED",
+  "effectiveDate": "2026-08-16",
+  "description": "Supermercado"
+}
+```
+
+Criação direta aceita somente `INCOME` e `EXPENSE`. O status aceita `PENDING` ou `CLEARED`; cancelamento usa operação própria. A categoria deve ter tipo compatível.
+
+### Consultar e manter lançamentos
+
+| Método | Endpoint | Função |
+|---|---|---|
+| `GET` | `/api/v1/transactions/{id}` | Consulta um lançamento. |
+| `GET` | `/api/v1/transactions` | Extrato paginado. |
+| `PATCH` | `/api/v1/transactions/{id}` | Atualiza somente os campos enviados. |
+| `POST` | `/api/v1/transactions/{id}/cancel` | Cancela preservando o histórico. |
+
+Filtros opcionais do extrato:
+
+- `accountId`;
+- `categoryId`;
+- `type`;
+- `status`;
+- `from` e `to` no formato `YYYY-MM-DD`;
+- `page`, iniciando em zero;
+- `size`, entre 1 e 100.
+
+A ordenação é estável e decrescente por data efetiva, criação e UUID.
+
+## Transferências
+
+`POST /api/v1/transfers`
+
+Exige `Idempotency-Key`.
+
+```json
+{
+  "sourceAccountId": "20000000-0000-0000-0000-000000000001",
+  "destinationAccountId": "20000000-0000-0000-0000-000000000002",
+  "amount": 500.00,
+  "effectiveDate": "2026-08-16",
+  "description": "Reserva mensal"
+}
+```
+
+As contas devem ser diferentes, ativas, do mesmo usuário e da mesma moeda. A resposta `201` contém o grupo, a perna `TRANSFER_OUT` e a perna `TRANSFER_IN`. As três linhas são persistidas na mesma transação de banco.
+
+## Resumo financeiro
+
+Todos os endpoints exigem `from` e `to` no formato `YYYY-MM-DD` e consideram lançamentos confirmados no período.
+
+| Método | Endpoint | Resultado |
+|---|---|---|
+| `GET` | `/api/v1/summary?from=2026-08-01&to=2026-08-31` | Receita, despesa e resultado separados por moeda. |
+| `GET` | `/api/v1/summary/by-category?from=...&to=...` | Total por categoria e moeda. |
+| `GET` | `/api/v1/summary/timeline?from=...&to=...` | Evolução por mês e moeda. |
+
+Transferências e saldo inicial afetam o patrimônio, mas não são contabilizados como receita ou despesa do período.
+
 ## Health check
 
 `GET /actuator/health`
@@ -123,6 +268,17 @@ Exemplo de validação `400`:
 | 404 | Recurso inexistente. |
 | 409 | E-mail duplicado ou violação de constraint de negócio. |
 | 500 | Erro inesperado sem detalhes internos. |
+
+Códigos financeiros relevantes:
+
+| Código | Uso |
+|---|---|
+| `INVALID_MONEY_AMOUNT` | Valor inválido ou precisão não suportada. |
+| `CATEGORY_TYPE_MISMATCH` | Categoria incompatível com receita/despesa. |
+| `CURRENCY_MISMATCH` | Transferência entre moedas diferentes. |
+| `ACCOUNT_ARCHIVED` | Tentativa de escrita em conta arquivada. |
+| `IDEMPOTENCY_CONFLICT` | Chave já usada com payload diferente. |
+| `CONCURRENT_MODIFICATION` | Recurso alterado concorrentemente. |
 
 ## Configuração do Swagger
 

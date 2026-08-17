@@ -2,6 +2,8 @@
 
 > **Nota de acompanhamento:** este documento registra a linha de base encontrada na auditoria. As correções da fase de estabilização foram implementadas depois da avaliação e estão descritas em [IMPLEMENTACAO_ESTABILIZACAO.md](IMPLEMENTACAO_ESTABILIZACAO.md). Os itens ainda abertos continuam válidos como roadmap.
 
+> **Atualização do MVP financeiro:** contas, categorias, receitas/despesas, extrato, saldos, transferências e resumos foram implementados conforme [IMPLEMENTACAO_MVP_FINANCEIRO.md](IMPLEMENTACAO_MVP_FINANCEIRO.md). As fases de planejamento financeiro e recursos avançados continuam pendentes.
+
 **Data da avaliação:** 16 de agosto de 2026  
 **Escopo analisado:** todo o repositório disponível nesta data, incluindo código Java, configuração Spring, persistência, segurança, testes, build e documentação.  
 **Estado do código:** há alterações locais de autenticação ainda não commitadas; esta avaliação considera essas alterações como parte do estado atual e não as modifica.

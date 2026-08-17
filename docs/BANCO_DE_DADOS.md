@@ -4,7 +4,7 @@
 
 O banco suportado é PostgreSQL. O Flyway é responsável pela estrutura; o Hibernate apenas valida o resultado com `ddl-auto: validate`.
 
-O schema da aplicação é `access`. O nome anterior `acess` foi corrigido.
+O schema `access` contém identidade e sessões. O schema `finance` contém contas, categorias, lançamentos e transferências. O nome anterior `acess` foi corrigido.
 
 ## Scripts versionados
 
@@ -13,6 +13,11 @@ O schema da aplicação é `access`. O nome anterior `acess` foi corrigido.
 | V1 | `src/main/resources/db/migration/V1__create_access_schema.sql` | Cria schema, usuários, papéis, associação e refresh tokens. |
 | V2 | `src/main/resources/db/migration/V2__seed_default_roles.sql` | Insere `ROLE_USER` e `ROLE_ADMIN`. |
 | V3 | `src/main/resources/db/migration/V3__create_access_indexes.sql` | Cria índices de consulta/limpeza de refresh tokens. |
+| V4 | `src/main/resources/db/migration/V4__create_finance_schema.sql` | Cria o schema financeiro. |
+| V5 | `src/main/resources/db/migration/V5__create_accounts.sql` | Cria contas, constraints e índices por proprietário. |
+| V6 | `src/main/resources/db/migration/V6__create_categories.sql` | Cria categorias e unicidade por usuário/tipo. |
+| V7 | `src/main/resources/db/migration/V7__create_financial_entries.sql` | Cria a razão de lançamentos, idempotência e índices do extrato. |
+| V8 | `src/main/resources/db/migration/V8__create_transfer_groups.sql` | Cria grupos de transferência e o vínculo atômico das pernas. |
 
 O Flyway mantém `access.flyway_schema_history` e aplica cada versão uma única vez.
 
@@ -23,6 +28,12 @@ erDiagram
     USERS ||--o{ USER_ROLES : has
     ROLES ||--o{ USER_ROLES : grants
     USERS ||--o{ REFRESH_TOKENS : owns
+    USERS ||--o{ ACCOUNTS : owns
+    USERS ||--o{ CATEGORIES : owns
+    USERS ||--o{ FINANCIAL_ENTRIES : owns
+    ACCOUNTS ||--o{ FINANCIAL_ENTRIES : contains
+    CATEGORIES ||--o{ FINANCIAL_ENTRIES : classifies
+    TRANSFER_GROUPS ||--|{ FINANCIAL_ENTRIES : links
 
     USERS {
         uuid id PK
@@ -49,7 +60,53 @@ erDiagram
         timestamptz expires_at
         timestamptz revoked_at
     }
+    ACCOUNTS {
+        uuid id PK
+        uuid user_id FK
+        varchar name
+        varchar type
+        char currency
+        varchar status
+        bigint version
+    }
+    CATEGORIES {
+        uuid id PK
+        uuid user_id FK
+        varchar name
+        varchar kind
+        varchar status
+        bigint version
+    }
+    FINANCIAL_ENTRIES {
+        uuid id PK
+        uuid user_id FK
+        uuid account_id FK
+        uuid category_id FK
+        uuid transfer_group_id FK
+        varchar type
+        numeric amount
+        varchar status
+        date effective_date
+        varchar idempotency_key
+    }
+    TRANSFER_GROUPS {
+        uuid id PK
+        uuid user_id FK
+        varchar idempotency_key
+        varchar request_fingerprint
+    }
 ```
+
+## Integridade financeira
+
+- Valores usam `NUMERIC(19,4)` e precisam ser positivos.
+- O tipo determina se o lançamento soma ou subtrai do saldo.
+- Não existe coluna materializada de saldo.
+- FKs compostas por recurso e `user_id` impedem vínculos entre proprietários diferentes.
+- Índices parciais garantem nomes ativos únicos e idempotency keys únicas.
+- Lançamentos cancelados exigem `canceled_at`; os demais proíbem esse campo.
+- `TRANSFER_IN` e `TRANSFER_OUT` exigem `transfer_group_id`.
+- Conta, grupo e duas pernas de transferência são gravados em transações atômicas no adapter.
 
 ## Subir o PostgreSQL local
 
@@ -108,7 +165,7 @@ Essa migration não foi automatizada porque o repositório não informa se exist
 
 ## Teste automatizado
 
-`DatabaseMigrationTest` cria um PostgreSQL 17 vazio, aplica todas as migrations e valida tabelas e papéis.
+`DatabaseMigrationTest` cria um PostgreSQL 17 vazio, aplica as oito migrations e valida tabelas, papéis e FKs nos schemas `access` e `finance`.
 
 ```powershell
 docker info

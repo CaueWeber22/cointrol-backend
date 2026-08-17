@@ -2,6 +2,11 @@ package com.fcproject.infrastructure.config;
 
 import com.fcproject.adapters.outbound.RefreshTokenAdapters;
 import com.fcproject.adapters.outbound.UserAdapters;
+import com.fcproject.adapters.outbound.FinancePersistenceAdapter;
+import com.fcproject.adapters.outbound.persistence.finance.AccountJPARepository;
+import com.fcproject.adapters.outbound.persistence.finance.CategoryJPARepository;
+import com.fcproject.adapters.outbound.persistence.finance.FinancialEntryJPARepository;
+import com.fcproject.adapters.outbound.persistence.finance.TransferGroupJPARepository;
 import com.fcproject.adapters.outbound.persistence.RefreshTokenJPARepository;
 import com.fcproject.adapters.outbound.persistence.RoleJPARepository;
 import com.fcproject.adapters.outbound.persistence.UserJPARepository;
@@ -11,6 +16,7 @@ import com.fcproject.application.core.services.AuthService;
 import com.fcproject.application.core.usecases.users.FindUserByEmailUsecase;
 import com.fcproject.application.core.usecases.users.FindUserByIdUsecase;
 import com.fcproject.application.core.usecases.users.SaveNewUserUsecase;
+import com.fcproject.application.core.usecases.finance.FinanceService;
 import com.fcproject.application.ports.inbound.AuthInPort;
 import com.fcproject.application.ports.inbound.userPorts.FindUserByEmailInPort;
 import com.fcproject.application.ports.inbound.userPorts.FindUserByIdInPort;
@@ -20,6 +26,8 @@ import com.fcproject.application.ports.outbound.AuthenticationOutPort;
 import com.fcproject.application.ports.outbound.PasswordHasherOutPort;
 import com.fcproject.application.ports.outbound.RefreshTokenOutPort;
 import com.fcproject.application.ports.outbound.UserOutPort;
+import com.fcproject.application.ports.inbound.finance.FinanceInPort;
+import com.fcproject.application.ports.outbound.finance.FinanceOutPort;
 import com.fcproject.infrastructure.security.JwtTokenAdapter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -97,5 +105,20 @@ public class ApplicationConfig {
             @Value("${security.jwt.refresh-token-expiration-days}") long refreshExpirationDays
     ) {
         return new AuthService(authentication, refreshTokens, accessTokens, clock, refreshExpirationDays);
+    }
+
+    @Bean
+    FinanceOutPort financeOutPort(
+            AccountJPARepository accounts,
+            CategoryJPARepository categories,
+            FinancialEntryJPARepository entries,
+            TransferGroupJPARepository transfers
+    ) {
+        return new FinancePersistenceAdapter(accounts, categories, entries, transfers);
+    }
+
+    @Bean
+    FinanceInPort financeInPort(FinanceOutPort finance, Clock clock) {
+        return new FinanceService(finance, clock);
     }
 }

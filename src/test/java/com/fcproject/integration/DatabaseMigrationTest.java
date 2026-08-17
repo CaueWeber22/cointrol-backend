@@ -23,11 +23,11 @@ class DatabaseMigrationTest {
         Flyway flyway = Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
                 .defaultSchema("access")
-                .schemas("access")
+                .schemas("access", "finance")
                 .createSchemas(true)
                 .load();
 
-        assertEquals(3, flyway.migrate().migrationsExecuted);
+        assertEquals(8, flyway.migrate().migrationsExecuted);
 
         try (var connection = DriverManager.getConnection(
                 POSTGRES.getJdbcUrl(),
@@ -43,6 +43,20 @@ class DatabaseMigrationTest {
             try (var roles = statement.executeQuery("select count(*) from access.roles")) {
                 roles.next();
                 assertEquals(2, roles.getInt(1));
+            }
+            try (var tables = statement.executeQuery(
+                    "select count(*) from information_schema.tables where table_schema = 'finance'"
+            )) {
+                tables.next();
+                assertEquals(4, tables.getInt(1));
+            }
+            try (var constraints = statement.executeQuery("""
+                    select count(*)
+                    from information_schema.table_constraints
+                    where constraint_schema = 'finance' and constraint_type = 'FOREIGN KEY'
+                    """)) {
+                constraints.next();
+                assertEquals(7, constraints.getInt(1));
             }
         }
     }

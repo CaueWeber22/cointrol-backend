@@ -39,6 +39,7 @@ Necessidades externas expressas pelo núcleo:
 - autenticação de credenciais;
 - hash de senha;
 - emissão de access token.
+- persistência financeira por proprietário, incluindo operação atômica de transferência.
 
 ### `adapters.inbound`
 
@@ -91,6 +92,29 @@ sequenceDiagram
     Auth->>Refresh: rotate com lock
     Auth-->>Client: novo access + novo refresh
 ```
+
+## Fluxo financeiro
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Controller
+    participant CurrentUser
+    participant Finance as FinanceInPort
+    participant Core as FinanceService
+    participant Persistence as FinanceOutPort
+    participant DB as PostgreSQL
+
+    Client->>Controller: Bearer + request
+    Controller->>CurrentUser: resolver proprietário
+    Controller->>Finance: comando com userId autenticado
+    Finance->>Core: validar regra e propriedade
+    Core->>Persistence: consultar/persistir por userId
+    Persistence->>DB: operação no schema finance
+    DB-->>Client: DTO sem userId manipulável
+```
+
+Contas, categorias, lançamentos, saldos, transferências e resumos compartilham a porta `FinanceInPort`. O adapter `FinancePersistenceAdapter` converte os modelos do núcleo para entidades JPA. Transferências e saldo inicial são delimitados por transação no adapter porque a atomicidade é uma capacidade externa solicitada pela porta.
 
 ## Regras automatizadas
 

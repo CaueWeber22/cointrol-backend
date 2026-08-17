@@ -2,6 +2,16 @@
 
 API de controle financeiro em Java 21 e Spring Boot, organizada com arquitetura hexagonal.
 
+## Features atuais
+
+- cadastro, login JWT, refresh, logout e perfil;
+- contas financeiras com saldo inicial por lançamento;
+- categorias de receita e despesa;
+- receitas, despesas, extrato paginado e cancelamento;
+- saldos confirmado, pendente e projetado;
+- transferências atômicas e idempotentes;
+- resumos por moeda, categoria e mês.
+
 ## Executar localmente
 
 Pré-requisitos: Java 21 e Docker.
@@ -26,6 +36,8 @@ O teste PostgreSQL/Testcontainers é executado quando o Docker está disponível
 
 - [Índice da documentação](docs/README.md)
 - [Implementação da estabilização](docs/IMPLEMENTACAO_ESTABILIZACAO.md)
+- [Implementação do MVP financeiro](docs/IMPLEMENTACAO_MVP_FINANCEIRO.md)
+- [Guia de features financeiras](docs/GUIA_IMPLEMENTACAO_FEATURES_FINANCEIRAS.md)
 - [Arquitetura](docs/ARQUITETURA.md)
 - [Banco de dados e migrations](docs/BANCO_DE_DADOS.md)
 - [Contrato da API](docs/API.md)
