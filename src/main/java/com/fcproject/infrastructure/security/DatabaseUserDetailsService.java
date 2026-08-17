@@ -25,7 +25,7 @@ public class DatabaseUserDetailsService implements UserDetailsService {
     }
 
     public UserDetails loadUserById(UUID userId) throws UsernameNotFoundException {
-        return userRepository.findWithRolesById(userId)
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 }

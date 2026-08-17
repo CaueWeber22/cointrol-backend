@@ -36,7 +36,7 @@ public class SpringAuthenticationAdapter implements AuthenticationOutPort {
 
     @Override
     public AuthenticatedUser loadById(UUID userId) {
-        return userRepository.findWithRolesById(userId)
+        return userRepository.findById(userId)
                 .map(this::toDomain)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
