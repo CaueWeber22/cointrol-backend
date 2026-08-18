@@ -389,6 +389,8 @@ Contrato recomendado:
 ```text
 POST /api/v1/transfers
 Idempotency-Key: <valor único>
+GET /api/v1/transfers/{id}
+POST /api/v1/transfers/{id}/cancel
 ```
 
 ```json
@@ -415,6 +417,8 @@ Migration sugerida:
 
 ```text
 V8__create_transfer_groups.sql
+V9__add_transfer_cancellation.sql
+V10__align_account_currency_type.sql
 ```
 
 Testes obrigatórios:

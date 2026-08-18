@@ -9,6 +9,7 @@ import com.fcproject.application.core.domain.finance.FinanceModels.FinancialEntr
 import com.fcproject.application.core.domain.finance.FinanceModels.ResourceStatus;
 import com.fcproject.application.core.domain.finance.FinanceModels.TransferGroup;
 import com.fcproject.application.core.domain.finance.FinanceModels.TransferResult;
+import com.fcproject.application.core.domain.finance.FinanceModels.TransferStatus;
 import com.fcproject.application.ports.inbound.finance.FinanceInPort;
 import com.fcproject.infrastructure.exceptions.GlobalHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +32,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -134,7 +136,10 @@ class FinanceControllerTest {
         FinancialEntry debit = entry(UUID.randomUUID(), ACCOUNT_ID, groupId, EntryType.TRANSFER_OUT);
         FinancialEntry credit = entry(UUID.randomUUID(), SECOND_ACCOUNT_ID, groupId, EntryType.TRANSFER_IN);
         when(finance.transfer(any())).thenReturn(new TransferResult(
-                new TransferGroup(groupId, USER_ID, "transfer-1", "fingerprint", NOW), debit, credit
+                new TransferGroup(
+                        groupId, USER_ID, "transfer-1", "fingerprint", TransferStatus.COMPLETED,
+                        null, null, 0, NOW, NOW
+                ), debit, credit
         ));
 
         mockMvc.perform(post("/api/v1/transfers")
@@ -153,7 +158,45 @@ class FinanceControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/v1/transfers/" + groupId))
                 .andExpect(jsonPath("$.debit.type").value("TRANSFER_OUT"))
-                .andExpect(jsonPath("$.credit.type").value("TRANSFER_IN"));
+                .andExpect(jsonPath("$.credit.type").value("TRANSFER_IN"))
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+    }
+
+    @Test
+    void getsAndCancelsTransferGroup() throws Exception {
+        UUID groupId = UUID.fromString("50000000-0000-0000-0000-000000000001");
+        FinancialEntry debit = entry(UUID.randomUUID(), ACCOUNT_ID, groupId, EntryType.TRANSFER_OUT);
+        FinancialEntry credit = entry(UUID.randomUUID(), SECOND_ACCOUNT_ID, groupId, EntryType.TRANSFER_IN);
+        TransferResult completed = new TransferResult(
+                new TransferGroup(
+                        groupId, USER_ID, "transfer-1", "fingerprint", TransferStatus.COMPLETED,
+                        null, null, 0, NOW, NOW
+                ), debit, credit
+        );
+        TransferResult canceled = new TransferResult(
+                new TransferGroup(
+                        groupId, USER_ID, "transfer-1", "fingerprint", TransferStatus.CANCELED,
+                        "conta incorreta", NOW, 1, NOW, NOW
+                ), canceled(debit), canceled(credit)
+        );
+        when(finance.getTransfer(USER_ID, groupId)).thenReturn(completed);
+        when(finance.cancelTransfer(USER_ID, groupId, "conta incorreta")).thenReturn(canceled);
+
+        mockMvc.perform(get("/api/v1/transfers/{id}", groupId).principal(PRINCIPAL))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(groupId.toString()))
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+
+        mockMvc.perform(post("/api/v1/transfers/{id}/cancel", groupId)
+                        .principal(PRINCIPAL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"conta incorreta\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELED"))
+                .andExpect(jsonPath("$.cancelReason").value("conta incorreta"))
+                .andExpect(jsonPath("$.canceledAt").exists())
+                .andExpect(jsonPath("$.debit.status").value("CANCELED"))
+                .andExpect(jsonPath("$.credit.status").value("CANCELED"));
     }
 
     private FinancialEntry entry(UUID id, UUID accountId, UUID groupId, EntryType type) {
@@ -162,6 +205,15 @@ class FinanceControllerTest {
                 type, new BigDecimal(type == EntryType.EXPENSE ? "49.9000" : "100.0000"),
                 EntryStatus.CLEARED, LocalDate.of(2026, 8, 16), "Teste", null, null,
                 0, null, NOW, NOW
+        );
+    }
+
+    private FinancialEntry canceled(FinancialEntry entry) {
+        return new FinancialEntry(
+                entry.id(), entry.userId(), entry.accountId(), entry.categoryId(), entry.transferGroupId(),
+                entry.type(), entry.amount(), EntryStatus.CANCELED, entry.effectiveDate(), entry.description(),
+                entry.idempotencyKey(), entry.requestFingerprint(), entry.version(), NOW,
+                entry.createdAt(), NOW
         );
     }
 }

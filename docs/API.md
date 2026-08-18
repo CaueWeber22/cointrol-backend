@@ -223,6 +223,34 @@ Exige `Idempotency-Key`.
 
 As contas devem ser diferentes, ativas, do mesmo usuário e da mesma moeda. A resposta `201` contém o grupo, a perna `TRANSFER_OUT` e a perna `TRANSFER_IN`. As três linhas são persistidas na mesma transação de banco.
 
+Retries concorrentes com a mesma chave e payload retornam o grupo persistido pela requisição vencedora. Se o payload for diferente, a API retorna `409 IDEMPOTENCY_CONFLICT`.
+
+### Consultar transferência
+
+`GET /api/v1/transfers/{id}`
+
+Retorna o grupo e suas duas pernas somente quando pertencem ao usuário autenticado. Um UUID de outro usuário responde `404`.
+
+### Cancelar transferência
+
+`POST /api/v1/transfers/{id}/cancel`
+
+```json
+{
+  "reason": "Conta de destino incorreta"
+}
+```
+
+O motivo é obrigatório e limitado a 255 caracteres. A operação:
+
+- muda o grupo para `CANCELED`;
+- registra `cancelReason`, `canceledAt` e `updatedAt`;
+- cancela `TRANSFER_OUT` e `TRANSFER_IN` com o mesmo instante;
+- persiste grupo e pernas na mesma transação;
+- é idempotente quando o grupo já está cancelado.
+
+As pernas não podem ser editadas ou canceladas pelos endpoints de lançamentos. Toda mudança deve partir do grupo.
+
 ## Resumo financeiro
 
 Todos os endpoints exigem `from` e `to` no formato `YYYY-MM-DD` e consideram lançamentos confirmados no período.
@@ -279,6 +307,8 @@ Códigos financeiros relevantes:
 | `ACCOUNT_ARCHIVED` | Tentativa de escrita em conta arquivada. |
 | `IDEMPOTENCY_CONFLICT` | Chave já usada com payload diferente. |
 | `CONCURRENT_MODIFICATION` | Recurso alterado concorrentemente. |
+| `CANCEL_REASON_REQUIRED` | Cancelamento de transferência sem motivo. |
+| `TRANSFER_ENTRY_IMMUTABLE` | Tentativa de alterar uma perna isoladamente. |
 
 ## Configuração do Swagger
 

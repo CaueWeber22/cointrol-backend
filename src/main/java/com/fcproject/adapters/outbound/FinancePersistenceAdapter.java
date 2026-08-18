@@ -19,14 +19,18 @@ import com.fcproject.application.core.domain.finance.FinanceModels.PageResult;
 import com.fcproject.application.core.domain.finance.FinanceModels.ResourceStatus;
 import com.fcproject.application.core.domain.finance.FinanceModels.TransferGroup;
 import com.fcproject.application.core.domain.finance.FinanceModels.TransferResult;
+import com.fcproject.application.core.exceptions.BusinessConflictException;
 import com.fcproject.application.ports.outbound.finance.FinanceOutPort;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Objects;
 import java.util.UUID;
 
 public class FinancePersistenceAdapter implements FinanceOutPort {
@@ -34,17 +38,20 @@ public class FinancePersistenceAdapter implements FinanceOutPort {
     private final CategoryJPARepository categories;
     private final FinancialEntryJPARepository entries;
     private final TransferGroupJPARepository transfers;
+    private final TransactionOperations writeTransactions;
 
     public FinancePersistenceAdapter(
             AccountJPARepository accounts,
             CategoryJPARepository categories,
             FinancialEntryJPARepository entries,
-            TransferGroupJPARepository transfers
+            TransferGroupJPARepository transfers,
+            TransactionOperations writeTransactions
     ) {
         this.accounts = accounts;
         this.categories = categories;
         this.entries = entries;
         this.transfers = transfers;
+        this.writeTransactions = writeTransactions;
     }
 
     @Override
@@ -147,22 +154,64 @@ public class FinancePersistenceAdapter implements FinanceOutPort {
     @Override
     @Transactional(readOnly = true)
     public Optional<TransferResult> findTransferByIdempotencyKey(UUID userId, String idempotencyKey) {
-        return transfers.findByUserIdAndIdempotencyKey(userId, idempotencyKey).map(group -> {
-            List<FinancialEntry> legs = entries.findAllByUserIdAndTransferGroupId(userId, group.getId())
-                    .stream().map(this::toDomain).toList();
-            FinancialEntry debit = leg(legs, EntryType.TRANSFER_OUT);
-            FinancialEntry credit = leg(legs, EntryType.TRANSFER_IN);
-            return new TransferResult(toDomain(group), debit, credit);
-        });
+        return transfers.findByUserIdAndIdempotencyKey(userId, idempotencyKey)
+                .map(group -> loadTransfer(userId, group));
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
+    public Optional<TransferResult> findTransfer(UUID userId, UUID transferId) {
+        return transfers.findByIdAndUserId(transferId, userId)
+                .map(group -> loadTransfer(userId, group));
+    }
+
+    @Override
     public TransferResult saveTransfer(TransferGroup group, FinancialEntry debit, FinancialEntry credit) {
+        try {
+            return Objects.requireNonNull(writeTransactions.execute(status ->
+                    persistTransfer(group, debit, credit)
+            ));
+        } catch (DataIntegrityViolationException exception) {
+            Optional<TransferResult> persisted = findTransferByIdempotencyKey(
+                    group.userId(), group.idempotencyKey()
+            );
+            if (persisted.isEmpty()) {
+                throw exception;
+            }
+            if (!group.requestFingerprint().equals(persisted.get().transfer().requestFingerprint())) {
+                throw new BusinessConflictException(
+                        "IDEMPOTENCY_CONFLICT",
+                        "Idempotency key was already used with another payload"
+                );
+            }
+            return persisted.get();
+        }
+    }
+
+    @Override
+    public TransferResult cancelTransfer(TransferGroup group, FinancialEntry debit, FinancialEntry credit) {
+        return Objects.requireNonNull(writeTransactions.execute(status ->
+                persistTransfer(group, debit, credit)
+        ));
+    }
+
+    private TransferResult persistTransfer(
+            TransferGroup group,
+            FinancialEntry debit,
+            FinancialEntry credit
+    ) {
         TransferGroup persistedGroup = toDomain(transfers.save(toEntity(group)));
         FinancialEntry persistedDebit = toDomain(entries.save(toEntity(debit)));
         FinancialEntry persistedCredit = toDomain(entries.save(toEntity(credit)));
         return new TransferResult(persistedGroup, persistedDebit, persistedCredit);
+    }
+
+    private TransferResult loadTransfer(UUID userId, TransferGroupEntity group) {
+        List<FinancialEntry> legs = entries.findAllByUserIdAndTransferGroupId(userId, group.getId())
+                .stream().map(this::toDomain).toList();
+        FinancialEntry debit = leg(legs, EntryType.TRANSFER_OUT);
+        FinancialEntry credit = leg(legs, EntryType.TRANSFER_IN);
+        return new TransferResult(toDomain(group), debit, credit);
     }
 
     private FinancialEntry leg(List<FinancialEntry> legs, EntryType type) {
@@ -219,14 +268,16 @@ public class FinancePersistenceAdapter implements FinanceOutPort {
 
     private TransferGroupEntity toEntity(TransferGroup value) {
         return new TransferGroupEntity(
-                value.id(), value.userId(), value.idempotencyKey(), value.requestFingerprint(), value.createdAt()
+                value.id(), value.userId(), value.idempotencyKey(), value.requestFingerprint(), value.status(),
+                value.cancelReason(), value.canceledAt(), value.version(), value.createdAt(), value.updatedAt()
         );
     }
 
     private TransferGroup toDomain(TransferGroupEntity value) {
         return new TransferGroup(
                 value.getId(), value.getUserId(), value.getIdempotencyKey(),
-                value.getRequestFingerprint(), value.getCreatedAt()
+                value.getRequestFingerprint(), value.getStatus(), value.getCancelReason(), value.getCanceledAt(),
+                value.getVersion(), value.getCreatedAt(), value.getUpdatedAt()
         );
     }
 }

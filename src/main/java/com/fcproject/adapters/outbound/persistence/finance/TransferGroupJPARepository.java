@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface TransferGroupJPARepository extends JpaRepository<TransferGroupEntity, UUID> {
     Optional<TransferGroupEntity> findByUserIdAndIdempotencyKey(UUID userId, String idempotencyKey);
+
+    Optional<TransferGroupEntity> findByIdAndUserId(UUID id, UUID userId);
 }

@@ -23,6 +23,7 @@ import com.fcproject.application.core.domain.finance.FinanceModels.PageResult;
 import com.fcproject.application.core.domain.finance.FinanceModels.ResourceStatus;
 import com.fcproject.application.core.domain.finance.FinanceModels.TransferGroup;
 import com.fcproject.application.core.domain.finance.FinanceModels.TransferResult;
+import com.fcproject.application.core.domain.finance.FinanceModels.TransferStatus;
 import com.fcproject.application.core.exceptions.BusinessConflictException;
 import com.fcproject.application.core.exceptions.BusinessRuleException;
 import com.fcproject.application.core.exceptions.ResourceNotFoundException;
@@ -321,7 +322,10 @@ public class FinanceService implements FinanceInPort {
 
         Instant now = clock.instant();
         UUID groupId = UUID.randomUUID();
-        TransferGroup group = new TransferGroup(groupId, command.userId(), key, requestFingerprint, now);
+        TransferGroup group = new TransferGroup(
+                groupId, command.userId(), key, requestFingerprint, TransferStatus.COMPLETED,
+                null, null, 0, now, now
+        );
         FinancialEntry debit = transferEntry(
                 command.userId(), source.id(), groupId, EntryType.TRANSFER_OUT,
                 amount, effectiveDate, description, now
@@ -331,6 +335,30 @@ public class FinanceService implements FinanceInPort {
                 amount, effectiveDate, description, now
         );
         return finance.saveTransfer(group, debit, credit);
+    }
+
+    @Override
+    public TransferResult getTransfer(UUID userId, UUID transferId) {
+        return requireTransfer(userId, transferId);
+    }
+
+    @Override
+    public TransferResult cancelTransfer(UUID userId, UUID transferId, String reason) {
+        TransferResult current = requireTransfer(userId, transferId);
+        if (current.transfer().status() == TransferStatus.CANCELED) {
+            return current;
+        }
+
+        String normalizedReason = normalizeCancelReason(reason);
+        Instant now = clock.instant();
+        TransferGroup canceledGroup = new TransferGroup(
+                current.transfer().id(), current.transfer().userId(), current.transfer().idempotencyKey(),
+                current.transfer().requestFingerprint(), TransferStatus.CANCELED, normalizedReason, now,
+                current.transfer().version(), current.transfer().createdAt(), now
+        );
+        FinancialEntry canceledDebit = cancelTransferLeg(current.debit(), now);
+        FinancialEntry canceledCredit = cancelTransferLeg(current.credit(), now);
+        return finance.cancelTransfer(canceledGroup, canceledDebit, canceledCredit);
     }
 
     @Override
@@ -466,6 +494,23 @@ public class FinanceService implements FinanceInPort {
         );
     }
 
+    private FinancialEntry cancelTransferLeg(FinancialEntry entry, Instant canceledAt) {
+        return new FinancialEntry(
+                entry.id(), entry.userId(), entry.accountId(), null, entry.transferGroupId(),
+                entry.type(), entry.amount(), EntryStatus.CANCELED, entry.effectiveDate(), entry.description(),
+                null, null, entry.version(), canceledAt, entry.createdAt(), canceledAt
+        );
+    }
+
+    private TransferResult requireTransfer(UUID userId, UUID transferId) {
+        requireUser(userId);
+        if (transferId == null) {
+            throw rule("TRANSFER_REQUIRED", "Transfer is required");
+        }
+        return finance.findTransfer(userId, transferId)
+                .orElseThrow(() -> new ResourceNotFoundException("Transfer not found"));
+    }
+
     private void validateCategoryCompatibility(EntryType type, Category category) {
         boolean valid = type == EntryType.INCOME && category.kind() == CategoryKind.INCOME
                 || type == EntryType.EXPENSE && category.kind() == CategoryKind.EXPENSE;
@@ -542,6 +587,17 @@ public class FinanceService implements FinanceInPort {
         String normalized = value.strip();
         if (normalized.length() > 100) {
             throw rule("INVALID_IDEMPOTENCY_KEY", "Idempotency key must have at most 100 characters");
+        }
+        return normalized;
+    }
+
+    private String normalizeCancelReason(String value) {
+        if (value == null || value.isBlank()) {
+            throw rule("CANCEL_REASON_REQUIRED", "Cancellation reason is required");
+        }
+        String normalized = value.strip().replaceAll("\\s+", " ");
+        if (normalized.length() > 255) {
+            throw rule("INVALID_CANCEL_REASON", "Cancellation reason must have at most 255 characters");
         }
         return normalized;
     }

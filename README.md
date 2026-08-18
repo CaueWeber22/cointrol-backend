@@ -9,7 +9,7 @@ API de controle financeiro em Java 21 e Spring Boot, organizada com arquitetura 
 - categorias de receita e despesa;
 - receitas, despesas, extrato paginado e cancelamento;
 - saldos confirmado, pendente e projetado;
-- transferências atômicas e idempotentes;
+- transferências consultáveis, canceláveis, atômicas e idempotentes;
 - resumos por moeda, categoria e mês.
 
 ## Executar localmente

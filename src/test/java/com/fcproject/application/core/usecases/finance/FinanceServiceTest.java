@@ -18,6 +18,8 @@ import com.fcproject.application.core.domain.finance.FinanceModels.FinancialEntr
 import com.fcproject.application.core.domain.finance.FinanceModels.PageResult;
 import com.fcproject.application.core.domain.finance.FinanceModels.ResourceStatus;
 import com.fcproject.application.core.domain.finance.FinanceModels.TransferResult;
+import com.fcproject.application.core.domain.finance.FinanceModels.TransferGroup;
+import com.fcproject.application.core.domain.finance.FinanceModels.TransferStatus;
 import com.fcproject.application.core.exceptions.BusinessConflictException;
 import com.fcproject.application.core.exceptions.BusinessRuleException;
 import com.fcproject.application.core.exceptions.ResourceNotFoundException;
@@ -269,6 +271,52 @@ class FinanceServiceTest {
     }
 
     @Test
+    void getsAndCancelsBothTransferLegsWithReasonAndTimestamp() {
+        UUID groupId = UUID.fromString("50000000-0000-0000-0000-000000000001");
+        TransferResult completed = transferResult(groupId, TransferStatus.COMPLETED, null, null);
+        when(finance.findTransfer(USER_ID, groupId)).thenReturn(Optional.of(completed));
+        when(finance.cancelTransfer(any(), any(), any())).thenAnswer(invocation ->
+                new TransferResult(invocation.getArgument(0), invocation.getArgument(1), invocation.getArgument(2)));
+
+        assertEquals(completed, service.getTransfer(USER_ID, groupId));
+        TransferResult canceled = service.cancelTransfer(USER_ID, groupId, "  conta   incorreta  ");
+
+        assertEquals(TransferStatus.CANCELED, canceled.transfer().status());
+        assertEquals("conta incorreta", canceled.transfer().cancelReason());
+        assertEquals(NOW, canceled.transfer().canceledAt());
+        assertEquals(EntryStatus.CANCELED, canceled.debit().status());
+        assertEquals(EntryStatus.CANCELED, canceled.credit().status());
+        assertEquals(NOW, canceled.debit().canceledAt());
+        assertEquals(NOW, canceled.credit().canceledAt());
+        verify(finance).cancelTransfer(any(), any(), any());
+    }
+
+    @Test
+    void repeatedTransferCancellationReturnsPersistedResult() {
+        UUID groupId = UUID.fromString("50000000-0000-0000-0000-000000000001");
+        TransferResult canceled = transferResult(groupId, TransferStatus.CANCELED, "duplicada", NOW);
+        when(finance.findTransfer(USER_ID, groupId)).thenReturn(Optional.of(canceled));
+
+        assertEquals(canceled, service.cancelTransfer(USER_ID, groupId, "outro motivo"));
+        verify(finance, never()).cancelTransfer(any(), any(), any());
+    }
+
+    @Test
+    void blocksDirectUpdateAndCancellationOfTransferLeg() {
+        FinancialEntry leg = transferLeg(
+                ENTRY_ID, ACCOUNT_ID, UUID.randomUUID(), EntryType.TRANSFER_OUT,
+                EntryStatus.CLEARED, null
+        );
+        when(finance.findEntry(USER_ID, ENTRY_ID)).thenReturn(Optional.of(leg));
+
+        assertThrows(BusinessConflictException.class, () -> service.updateEntry(new UpdateEntry(
+                USER_ID, ENTRY_ID, null, null, BigDecimal.TEN, null, null, null
+        )));
+        assertThrows(BusinessConflictException.class, () -> service.cancelEntry(USER_ID, ENTRY_ID));
+        verify(finance, never()).saveEntry(any());
+    }
+
+    @Test
     void rejectsInvalidTransfers() {
         assertThrows(BusinessRuleException.class, () -> service.transfer(new Transfer(
                 USER_ID, ACCOUNT_ID, ACCOUNT_ID, BigDecimal.ONE, DATE, null, "same"
@@ -343,6 +391,39 @@ class FinanceServiceTest {
                 id, USER_ID, accountId, categoryId, type == EntryType.TRANSFER_IN || type == EntryType.TRANSFER_OUT
                 ? UUID.randomUUID() : null, type, amount, status, DATE, "Teste", "entry-1", fingerprint,
                 0, status == EntryStatus.CANCELED ? NOW : null, NOW, NOW
+        );
+    }
+
+    private TransferResult transferResult(
+            UUID groupId,
+            TransferStatus status,
+            String reason,
+            Instant canceledAt
+    ) {
+        TransferGroup group = new TransferGroup(
+                groupId, USER_ID, "transfer-1", "fingerprint", status, reason, canceledAt,
+                0, NOW, canceledAt == null ? NOW : canceledAt
+        );
+        return new TransferResult(
+                group,
+                transferLeg(UUID.randomUUID(), ACCOUNT_ID, groupId, EntryType.TRANSFER_OUT,
+                        status == TransferStatus.CANCELED ? EntryStatus.CANCELED : EntryStatus.CLEARED, canceledAt),
+                transferLeg(UUID.randomUUID(), SECOND_ACCOUNT_ID, groupId, EntryType.TRANSFER_IN,
+                        status == TransferStatus.CANCELED ? EntryStatus.CANCELED : EntryStatus.CLEARED, canceledAt)
+        );
+    }
+
+    private FinancialEntry transferLeg(
+            UUID id,
+            UUID accountId,
+            UUID groupId,
+            EntryType type,
+            EntryStatus status,
+            Instant canceledAt
+    ) {
+        return new FinancialEntry(
+                id, USER_ID, accountId, null, groupId, type, new BigDecimal("50.0000"), status,
+                DATE, "Reserva", null, null, 0, canceledAt, NOW, canceledAt == null ? NOW : canceledAt
         );
     }
 }

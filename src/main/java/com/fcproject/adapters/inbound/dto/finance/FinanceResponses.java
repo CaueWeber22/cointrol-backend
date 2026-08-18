@@ -110,14 +110,21 @@ public final class FinanceResponses {
 
     public record TransferResponse(
             UUID id,
+            String status,
+            String cancelReason,
+            Instant canceledAt,
             TransactionResponse debit,
             TransactionResponse credit,
-            Instant createdAt
+            long version,
+            Instant createdAt,
+            Instant updatedAt
     ) {
         public static TransferResponse from(TransferResult value) {
             return new TransferResponse(
-                    value.transfer().id(), TransactionResponse.from(value.debit()),
-                    TransactionResponse.from(value.credit()), value.transfer().createdAt()
+                    value.transfer().id(), value.transfer().status().name(), value.transfer().cancelReason(),
+                    value.transfer().canceledAt(), TransactionResponse.from(value.debit()),
+                    TransactionResponse.from(value.credit()), value.transfer().version(),
+                    value.transfer().createdAt(), value.transfer().updatedAt()
             );
         }
     }

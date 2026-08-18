@@ -14,7 +14,7 @@ O usuário autenticado pode:
 - criar receitas e despesas idempotentes;
 - consultar, filtrar, editar e cancelar lançamentos;
 - consultar saldo confirmado, pendente e projetado;
-- transferir valores atomicamente entre contas da mesma moeda;
+- criar, consultar e cancelar transferências atomicamente entre contas da mesma moeda;
 - consultar resumo por moeda, categoria e mês.
 
 ## Regras implementadas
@@ -56,6 +56,9 @@ O usuário autenticado pode:
 - Contas, categorias e lançamentos usam versão otimista.
 - Conflitos de versão retornam `409 CONCURRENT_MODIFICATION`.
 - A persistência de uma transferência grava grupo, débito e crédito na mesma transação.
+- O cancelamento grava motivo/instante no grupo e cancela as duas pernas na mesma transação.
+- Pernas de transferência não podem ser alteradas ou canceladas isoladamente.
+- Uma corrida de criação idempotente recarrega e retorna a transferência vencedora após rollback.
 - O saldo inicial e a conta também são persistidos atomicamente.
 
 ## Arquitetura
@@ -88,35 +91,35 @@ Foram adicionadas:
 | V6 | Categorias e unicidade por tipo. |
 | V7 | Lançamentos, idempotência e índices de extrato. |
 | V8 | Grupos de transferência e vínculo das duas pernas. |
+| V9 | Estado, motivo, instante e versão para cancelamento do grupo. |
+| V10 | Alinhamento de `accounts.currency` com o tipo `VARCHAR(3)` esperado pelo Hibernate. |
 
 Os scripts executáveis continuam em `src/main/resources/db/migration` e estão descritos em `BANCO_DE_DADOS.md`.
 
 ## Validação realizada
 
 ```text
-Tests run: 36, Failures: 0, Errors: 0, Skipped: 1
+Tests run: 43, Failures: 0, Errors: 0, Skipped: 1
 BUILD SUCCESS
-Instruction coverage: 51.1%
-Branch coverage: 49.5%
+Instruction coverage: 58.4%
+Branch coverage: 51.9%
 ```
 
-O teste ignorado é o de migrations com PostgreSQL/Testcontainers, pois o Docker daemon estava desligado no ambiente local. O teste foi atualizado para aplicar as oito migrations, validar os dois schemas, contar tabelas e verificar FKs. Ele deve executar automaticamente no CI e quando o Docker estiver ativo.
+O teste ignorado é o de migrations com PostgreSQL/Testcontainers, pois o Docker daemon estava desligado no ambiente local. O teste foi atualizado para aplicar as dez migrations, validar os dois schemas, contar tabelas, verificar FKs, conferir as colunas de cancelamento e validar o tipo da moeda. Ele deve executar automaticamente no CI e quando o Docker estiver ativo.
 
 ## Limites intencionais deste MVP
 
-- Transferências são criadas, mas ainda não possuem endpoint próprio de edição/cancelamento.
 - Não há conversão cambial.
 - Não há categorias globais pré-carregadas.
 - Não há recorrências, parcelas, orçamentos, metas, cartões ou importação.
 - Resumos são calculados sobre lançamentos carregados no período; otimizações SQL podem ser introduzidas quando houver volume medido.
-- A proteção de idempotência concorrente termina em `409` quando duas primeiras requisições chegam exatamente juntas; um retry posterior recupera o resultado persistido.
+- Transferências canceladas não podem ser reabertas; uma correção posterior exige nova transferência.
 
 ## Próximas melhorias recomendadas
 
 1. Executar o teste Testcontainers e um smoke test completo com Docker ativo.
-2. Adicionar cancelamento atômico de transferências.
-3. Criar categorias padrão no onboarding.
-4. Evoluir os resumos para projections SQL após medir volume e latência.
-5. Adicionar orçamentos mensais por categoria.
-6. Implementar recorrências e parcelamentos idempotentes.
-7. Adicionar métricas, correlation ID e auditoria de alterações financeiras.
+2. Criar categorias padrão no onboarding.
+3. Evoluir os resumos para projections SQL após medir volume e latência.
+4. Adicionar orçamentos mensais por categoria.
+5. Implementar recorrências e parcelamentos idempotentes.
+6. Adicionar métricas, correlation ID e auditoria de alterações financeiras.

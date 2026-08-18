@@ -18,6 +18,8 @@ O schema `access` contém identidade e sessões. O schema `finance` contém cont
 | V6 | `src/main/resources/db/migration/V6__create_categories.sql` | Cria categorias e unicidade por usuário/tipo. |
 | V7 | `src/main/resources/db/migration/V7__create_financial_entries.sql` | Cria a razão de lançamentos, idempotência e índices do extrato. |
 | V8 | `src/main/resources/db/migration/V8__create_transfer_groups.sql` | Cria grupos de transferência e o vínculo atômico das pernas. |
+| V9 | `src/main/resources/db/migration/V9__add_transfer_cancellation.sql` | Adiciona estado, motivo, instante de cancelamento, versão e auditoria ao grupo. |
+| V10 | `src/main/resources/db/migration/V10__align_account_currency_type.sql` | Alinha `accounts.currency` de `CHAR(3)` para `VARCHAR(3)`, conforme o mapeamento JPA. |
 
 O Flyway mantém `access.flyway_schema_history` e aplica cada versão uma única vez.
 
@@ -65,7 +67,7 @@ erDiagram
         uuid user_id FK
         varchar name
         varchar type
-        char currency
+        varchar currency
         varchar status
         bigint version
     }
@@ -94,6 +96,11 @@ erDiagram
         uuid user_id FK
         varchar idempotency_key
         varchar request_fingerprint
+        varchar status
+        varchar cancel_reason
+        timestamptz canceled_at
+        bigint version
+        timestamptz updated_at
     }
 ```
 
@@ -107,6 +114,8 @@ erDiagram
 - Lançamentos cancelados exigem `canceled_at`; os demais proíbem esse campo.
 - `TRANSFER_IN` e `TRANSFER_OUT` exigem `transfer_group_id`.
 - Conta, grupo e duas pernas de transferência são gravados em transações atômicas no adapter.
+- Cancelamento exige motivo e instante quando o grupo está `CANCELED`; grupos `COMPLETED` proíbem esses campos.
+- Cancelar uma transferência atualiza o grupo e as duas pernas na mesma transação.
 
 ## Subir o PostgreSQL local
 
@@ -165,7 +174,7 @@ Essa migration não foi automatizada porque o repositório não informa se exist
 
 ## Teste automatizado
 
-`DatabaseMigrationTest` cria um PostgreSQL 17 vazio, aplica as oito migrations e valida tabelas, papéis e FKs nos schemas `access` e `finance`.
+`DatabaseMigrationTest` cria um PostgreSQL 17 vazio, aplica as dez migrations e valida tabelas, papéis, FKs, colunas de cancelamento e o tipo de `accounts.currency` nos schemas `access` e `finance`.
 
 ```powershell
 docker info

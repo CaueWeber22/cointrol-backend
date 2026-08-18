@@ -116,6 +116,8 @@ sequenceDiagram
 
 Contas, categorias, lançamentos, saldos, transferências e resumos compartilham a porta `FinanceInPort`. O adapter `FinancePersistenceAdapter` converte os modelos do núcleo para entidades JPA. Transferências e saldo inicial são delimitados por transação no adapter porque a atomicidade é uma capacidade externa solicitada pela porta.
 
+O grupo é a raiz operacional da transferência. Consulta e cancelamento carregam o grupo com `TRANSFER_OUT` e `TRANSFER_IN`; os casos de uso de lançamento rejeitam alterações isoladas. Na criação concorrente, o adapter executa a escrita em uma transação, aguarda a resolução da constraint idempotente e, após rollback do perdedor, recarrega o resultado vencedor em uma nova leitura.
+
 ## Regras automatizadas
 
 `HexagonalArchitectureTest` garante que classes em `application` não dependam de:

@@ -48,5 +48,9 @@ public interface FinanceOutPort {
 
     Optional<TransferResult> findTransferByIdempotencyKey(UUID userId, String idempotencyKey);
 
+    Optional<TransferResult> findTransfer(UUID userId, UUID transferId);
+
     TransferResult saveTransfer(TransferGroup group, FinancialEntry debit, FinancialEntry credit);
+
+    TransferResult cancelTransfer(TransferGroup group, FinancialEntry debit, FinancialEntry credit);
 }

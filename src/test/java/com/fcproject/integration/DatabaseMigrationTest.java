@@ -27,7 +27,7 @@ class DatabaseMigrationTest {
                 .createSchemas(true)
                 .load();
 
-        assertEquals(8, flyway.migrate().migrationsExecuted);
+        assertEquals(10, flyway.migrate().migrationsExecuted);
 
         try (var connection = DriverManager.getConnection(
                 POSTGRES.getJdbcUrl(),
@@ -57,6 +57,28 @@ class DatabaseMigrationTest {
                     """)) {
                 constraints.next();
                 assertEquals(7, constraints.getInt(1));
+            }
+            try (var columns = statement.executeQuery("""
+                    select count(*)
+                    from information_schema.columns
+                    where table_schema = 'finance'
+                      and table_name = 'transfer_groups'
+                      and column_name in ('status', 'cancel_reason', 'canceled_at', 'version', 'updated_at')
+                    """)) {
+                columns.next();
+                assertEquals(5, columns.getInt(1));
+            }
+            try (var currencyColumn = statement.executeQuery("""
+                    select count(*)
+                    from information_schema.columns
+                    where table_schema = 'finance'
+                      and table_name = 'accounts'
+                      and column_name = 'currency'
+                      and data_type = 'character varying'
+                      and character_maximum_length = 3
+                    """)) {
+                currencyColumn.next();
+                assertEquals(1, currencyColumn.getInt(1));
             }
         }
     }

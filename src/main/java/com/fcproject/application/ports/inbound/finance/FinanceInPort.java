@@ -58,6 +58,10 @@ public interface FinanceInPort {
 
     TransferResult transfer(Transfer command);
 
+    TransferResult getTransfer(UUID userId, UUID transferId);
+
+    TransferResult cancelTransfer(UUID userId, UUID transferId, String reason);
+
     List<CurrencySummary> summarize(UUID userId, LocalDate from, LocalDate to);
 
     List<CategorySummary> summarizeByCategory(UUID userId, LocalDate from, LocalDate to);

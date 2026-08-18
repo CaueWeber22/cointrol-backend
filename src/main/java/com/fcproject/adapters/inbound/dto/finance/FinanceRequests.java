@@ -72,4 +72,9 @@ public final class FinanceRequests {
             @Size(max = 255) String description
     ) {
     }
+
+    public record CancelTransferRequest(
+            @NotBlank @Size(max = 255) String reason
+    ) {
+    }
 }

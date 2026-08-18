@@ -21,6 +21,8 @@ public final class FinanceModels {
 
     public enum EntryStatus { PENDING, CLEARED, CANCELED }
 
+    public enum TransferStatus { COMPLETED, CANCELED }
+
     public record Account(
             UUID id,
             UUID userId,
@@ -71,7 +73,12 @@ public final class FinanceModels {
             UUID userId,
             String idempotencyKey,
             String requestFingerprint,
-            Instant createdAt
+            TransferStatus status,
+            String cancelReason,
+            Instant canceledAt,
+            long version,
+            Instant createdAt,
+            Instant updatedAt
     ) {
     }
 
