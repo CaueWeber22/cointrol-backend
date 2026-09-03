@@ -61,9 +61,9 @@ class FinanceControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         mockMvc = standaloneSetup(
-                new AccountController(finance, currentUser),
-                new TransactionController(finance, currentUser),
-                new TransferController(finance, currentUser)
+                new AccountController(finance, finance, finance, finance, finance, finance, currentUser),
+                new TransactionController(finance, finance, finance, finance, finance, currentUser),
+                new TransferController(finance, finance, finance, currentUser)
         ).setControllerAdvice(new GlobalHandler()).setValidator(validator).build();
         lenient().when(currentUser.get(any(Principal.class))).thenReturn(USER_ID);
     }

@@ -27,7 +27,7 @@ class DatabaseMigrationTest {
                 .createSchemas(true)
                 .load();
 
-        assertEquals(10, flyway.migrate().migrationsExecuted);
+        assertEquals(11, flyway.migrate().migrationsExecuted);
 
         try (var connection = DriverManager.getConnection(
                 POSTGRES.getJdbcUrl(),
@@ -38,7 +38,7 @@ class DatabaseMigrationTest {
                     "select count(*) from information_schema.tables where table_schema = 'access'"
             )) {
                 tables.next();
-                assertEquals(5, tables.getInt(1));
+                assertEquals(7, tables.getInt(1));
             }
             try (var roles = statement.executeQuery("select count(*) from access.roles")) {
                 roles.next();
@@ -79,6 +79,15 @@ class DatabaseMigrationTest {
                     """)) {
                 currencyColumn.next();
                 assertEquals(1, currencyColumn.getInt(1));
+            }
+            try (var securityTables = statement.executeQuery("""
+                    select count(*)
+                    from information_schema.tables
+                    where table_schema = 'access'
+                      and table_name in ('login_attempts', 'security_audit_events')
+                    """)) {
+                securityTables.next();
+                assertEquals(2, securityTables.getInt(1));
             }
         }
     }

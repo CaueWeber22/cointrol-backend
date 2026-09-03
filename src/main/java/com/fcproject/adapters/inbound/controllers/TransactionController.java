@@ -10,7 +10,11 @@ import com.fcproject.application.core.commands.finance.FinanceCommands.EntryFilt
 import com.fcproject.application.core.commands.finance.FinanceCommands.UpdateEntry;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryStatus;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryType;
-import com.fcproject.application.ports.inbound.finance.FinanceInPort;
+import com.fcproject.application.ports.inbound.finance.CancelEntryInPort;
+import com.fcproject.application.ports.inbound.finance.CreateEntryInPort;
+import com.fcproject.application.ports.inbound.finance.GetEntryInPort;
+import com.fcproject.application.ports.inbound.finance.ListEntriesInPort;
+import com.fcproject.application.ports.inbound.finance.UpdateEntryInPort;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -32,11 +36,26 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/transactions")
 public class TransactionController {
-    private final FinanceInPort finance;
+    private final CreateEntryInPort createEntry;
+    private final GetEntryInPort getEntry;
+    private final ListEntriesInPort listEntries;
+    private final UpdateEntryInPort updateEntry;
+    private final CancelEntryInPort cancelEntry;
     private final CurrentUserIdProvider currentUser;
 
-    public TransactionController(FinanceInPort finance, CurrentUserIdProvider currentUser) {
-        this.finance = finance;
+    public TransactionController(
+            CreateEntryInPort createEntry,
+            GetEntryInPort getEntry,
+            ListEntriesInPort listEntries,
+            UpdateEntryInPort updateEntry,
+            CancelEntryInPort cancelEntry,
+            CurrentUserIdProvider currentUser
+    ) {
+        this.createEntry = createEntry;
+        this.getEntry = getEntry;
+        this.listEntries = listEntries;
+        this.updateEntry = updateEntry;
+        this.cancelEntry = cancelEntry;
         this.currentUser = currentUser;
     }
 
@@ -46,7 +65,7 @@ public class TransactionController {
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody CreateTransactionRequest request
     ) {
-        TransactionResponse response = TransactionResponse.from(finance.createEntry(new CreateEntry(
+        TransactionResponse response = TransactionResponse.from(createEntry.createEntry(new CreateEntry(
                 currentUser.get(principal), request.accountId(), request.categoryId(), request.type(),
                 request.amount(), request.status(), request.effectiveDate(), request.description(), idempotencyKey
         )));
@@ -55,7 +74,7 @@ public class TransactionController {
 
     @GetMapping("/{id}")
     public TransactionResponse get(Principal principal, @PathVariable UUID id) {
-        return TransactionResponse.from(finance.getEntry(currentUser.get(principal), id));
+        return TransactionResponse.from(getEntry.getEntry(currentUser.get(principal), id));
     }
 
     @GetMapping
@@ -70,7 +89,7 @@ public class TransactionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return PageResponse.from(finance.listEntries(new EntryFilter(
+        return PageResponse.from(listEntries.listEntries(new EntryFilter(
                 currentUser.get(principal), accountId, categoryId, type, status, from, to, page, size
         )));
     }
@@ -81,7 +100,7 @@ public class TransactionController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdateTransactionRequest request
     ) {
-        return TransactionResponse.from(finance.updateEntry(new UpdateEntry(
+        return TransactionResponse.from(updateEntry.updateEntry(new UpdateEntry(
                 currentUser.get(principal), id, request.accountId(), request.categoryId(), request.amount(),
                 request.status(), request.effectiveDate(), request.description()
         )));
@@ -89,6 +108,6 @@ public class TransactionController {
 
     @PostMapping("/{id}/cancel")
     public TransactionResponse cancel(Principal principal, @PathVariable UUID id) {
-        return TransactionResponse.from(finance.cancelEntry(currentUser.get(principal), id));
+        return TransactionResponse.from(cancelEntry.cancelEntry(currentUser.get(principal), id));
     }
 }

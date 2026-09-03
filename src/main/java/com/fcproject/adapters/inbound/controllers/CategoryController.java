@@ -8,7 +8,10 @@ import com.fcproject.application.core.commands.finance.FinanceCommands.CreateCat
 import com.fcproject.application.core.commands.finance.FinanceCommands.UpdateCategory;
 import com.fcproject.application.core.domain.finance.FinanceModels.CategoryKind;
 import com.fcproject.application.core.domain.finance.FinanceModels.ResourceStatus;
-import com.fcproject.application.ports.inbound.finance.FinanceInPort;
+import com.fcproject.application.ports.inbound.finance.ArchiveCategoryInPort;
+import com.fcproject.application.ports.inbound.finance.CreateCategoryInPort;
+import com.fcproject.application.ports.inbound.finance.ListCategoriesInPort;
+import com.fcproject.application.ports.inbound.finance.UpdateCategoryInPort;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,11 +32,23 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/categories")
 public class CategoryController {
-    private final FinanceInPort finance;
+    private final CreateCategoryInPort createCategory;
+    private final ListCategoriesInPort listCategories;
+    private final UpdateCategoryInPort updateCategory;
+    private final ArchiveCategoryInPort archiveCategory;
     private final CurrentUserIdProvider currentUser;
 
-    public CategoryController(FinanceInPort finance, CurrentUserIdProvider currentUser) {
-        this.finance = finance;
+    public CategoryController(
+            CreateCategoryInPort createCategory,
+            ListCategoriesInPort listCategories,
+            UpdateCategoryInPort updateCategory,
+            ArchiveCategoryInPort archiveCategory,
+            CurrentUserIdProvider currentUser
+    ) {
+        this.createCategory = createCategory;
+        this.listCategories = listCategories;
+        this.updateCategory = updateCategory;
+        this.archiveCategory = archiveCategory;
         this.currentUser = currentUser;
     }
 
@@ -42,7 +57,7 @@ public class CategoryController {
             Principal principal,
             @Valid @RequestBody CreateCategoryRequest request
     ) {
-        CategoryResponse response = CategoryResponse.from(finance.createCategory(new CreateCategory(
+        CategoryResponse response = CategoryResponse.from(createCategory.createCategory(new CreateCategory(
                 currentUser.get(principal), request.name(), request.kind()
         )));
         return ResponseEntity.created(URI.create("/api/v1/categories/" + response.id())).body(response);
@@ -54,7 +69,7 @@ public class CategoryController {
             @RequestParam(required = false) CategoryKind kind,
             @RequestParam(required = false) ResourceStatus status
     ) {
-        return finance.listCategories(currentUser.get(principal), kind, status)
+        return listCategories.listCategories(currentUser.get(principal), kind, status)
                 .stream().map(CategoryResponse::from).toList();
     }
 
@@ -64,14 +79,14 @@ public class CategoryController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdateCategoryRequest request
     ) {
-        return CategoryResponse.from(finance.updateCategory(
+        return CategoryResponse.from(updateCategory.updateCategory(
                 new UpdateCategory(currentUser.get(principal), id, request.name())
         ));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> archive(Principal principal, @PathVariable UUID id) {
-        finance.archiveCategory(currentUser.get(principal), id);
+        archiveCategory.archiveCategory(currentUser.get(principal), id);
         return ResponseEntity.noContent().build();
     }
 }

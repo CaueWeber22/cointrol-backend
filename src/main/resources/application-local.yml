@@ -12,6 +12,7 @@ springdoc:
 
 security:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:4200,http://127.0.0.1:4200}
   jwt:
     secret: ${JWT_SECRET:local-development-secret-change-before-production-2026}
+    active-key-id: ${JWT_ACTIVE_KEY_ID:local-primary}

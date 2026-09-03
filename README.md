@@ -4,7 +4,7 @@ API de controle financeiro em Java 21 e Spring Boot, organizada com arquitetura 
 
 ## Features atuais
 
-- cadastro, login JWT, refresh, logout e perfil;
+- cadastro, login JWT, refresh, logout, perfil, contenção de abuso e auditoria de segurança;
 - contas financeiras com saldo inicial por lançamento;
 - categorias de receita e despesa;
 - receitas, despesas, extrato paginado e cancelamento;
@@ -40,5 +40,6 @@ O teste PostgreSQL/Testcontainers é executado quando o Docker está disponível
 - [Guia de features financeiras](docs/GUIA_IMPLEMENTACAO_FEATURES_FINANCEIRAS.md)
 - [Arquitetura](docs/ARQUITETURA.md)
 - [Banco de dados e migrations](docs/BANCO_DE_DADOS.md)
+- [Segurança e rotação de chaves](docs/SEGURANCA.md)
 - [Contrato da API](docs/API.md)
 - [Avaliação técnica e roadmap](docs/AVALIACAO_TECNICA_E_ROADMAP.md)

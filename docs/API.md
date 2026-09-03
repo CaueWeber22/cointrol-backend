@@ -60,6 +60,8 @@ Resposta `200 OK`:
 
 `expiresIn` é expresso em segundos.
 
+Depois de cinco falhas dentro da janela padrão de 15 minutos, o identificador fica temporariamente bloqueado. A resposta usa `429 LOGIN_TEMPORARILY_BLOCKED` e informa `Retry-After` sem revelar se o usuário existe.
+
 ## Renovar sessão
 
 `POST /api/v1/auth/refresh`
@@ -295,7 +297,10 @@ Exemplo de validação `400`:
 | 403 | Usuário autenticado sem permissão. |
 | 404 | Recurso inexistente. |
 | 409 | E-mail duplicado ou violação de constraint de negócio. |
+| 429 | Rate limit excedido ou login temporariamente bloqueado. |
 | 500 | Erro inesperado sem detalhes internos. |
+
+Respostas `429` incluem o header `Retry-After` e a propriedade `retryAfterSeconds`. Os códigos possíveis são `RATE_LIMIT_EXCEEDED` e `LOGIN_TEMPORARILY_BLOCKED`.
 
 Códigos financeiros relevantes:
 

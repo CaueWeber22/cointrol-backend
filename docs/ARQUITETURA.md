@@ -118,6 +118,12 @@ Contas, categorias, lançamentos, saldos, transferências e resumos compartilham
 
 O grupo é a raiz operacional da transferência. Consulta e cancelamento carregam o grupo com `TRANSFER_OUT` e `TRANSFER_IN`; os casos de uso de lançamento rejeitam alterações isoladas. Na criação concorrente, o adapter executa a escrita em uma transação, aguarda a resolução da constraint idempotente e, após rollback do perdedor, recarrega o resultado vencedor em uma nova leitura.
 
+## Fluxo de segurança
+
+O núcleo de autenticação coordena portas de autenticação, refresh token, proteção de login e auditoria. O adapter JDBC atualiza contadores de falha atomicamente; o adapter JPA persiste eventos sem levar Spring ou Jakarta para `application`.
+
+Na borda HTTP, o rate limiter é executado antes da validação JWT. Tokens carregam `kid`; a infraestrutura assina com a chave ativa e aceita temporariamente as chaves anteriores configuradas durante uma rotação. Detalhes operacionais estão em [SEGURANCA.md](SEGURANCA.md).
+
 ## Regras automatizadas
 
 `HexagonalArchitectureTest` garante que classes em `application` não dependam de:

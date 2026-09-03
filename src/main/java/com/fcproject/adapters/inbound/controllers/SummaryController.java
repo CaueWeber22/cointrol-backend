@@ -4,7 +4,9 @@ import com.fcproject.adapters.inbound.dto.finance.FinanceResponses.CategorySumma
 import com.fcproject.adapters.inbound.dto.finance.FinanceResponses.CurrencySummaryResponse;
 import com.fcproject.adapters.inbound.dto.finance.FinanceResponses.MonthlySummaryResponse;
 import com.fcproject.adapters.inbound.security.CurrentUserIdProvider;
-import com.fcproject.application.ports.inbound.finance.FinanceInPort;
+import com.fcproject.application.ports.inbound.finance.SummarizeByCategoryInPort;
+import com.fcproject.application.ports.inbound.finance.SummarizeInPort;
+import com.fcproject.application.ports.inbound.finance.SummarizeTimelineInPort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,11 +20,20 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/summary")
 public class SummaryController {
-    private final FinanceInPort finance;
+    private final SummarizeInPort summarize;
+    private final SummarizeByCategoryInPort summarizeByCategory;
+    private final SummarizeTimelineInPort summarizeTimeline;
     private final CurrentUserIdProvider currentUser;
 
-    public SummaryController(FinanceInPort finance, CurrentUserIdProvider currentUser) {
-        this.finance = finance;
+    public SummaryController(
+            SummarizeInPort summarize,
+            SummarizeByCategoryInPort summarizeByCategory,
+            SummarizeTimelineInPort summarizeTimeline,
+            CurrentUserIdProvider currentUser
+    ) {
+        this.summarize = summarize;
+        this.summarizeByCategory = summarizeByCategory;
+        this.summarizeTimeline = summarizeTimeline;
         this.currentUser = currentUser;
     }
 
@@ -32,7 +43,7 @@ public class SummaryController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
-        return finance.summarize(currentUser.get(principal), from, to)
+        return summarize.summarize(currentUser.get(principal), from, to)
                 .stream().map(CurrencySummaryResponse::from).toList();
     }
 
@@ -42,7 +53,7 @@ public class SummaryController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
-        return finance.summarizeByCategory(currentUser.get(principal), from, to)
+        return summarizeByCategory.summarizeByCategory(currentUser.get(principal), from, to)
                 .stream().map(CategorySummaryResponse::from).toList();
     }
 
@@ -52,7 +63,7 @@ public class SummaryController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
-        return finance.summarizeTimeline(currentUser.get(principal), from, to)
+        return summarizeTimeline.summarizeTimeline(currentUser.get(principal), from, to)
                 .stream().map(MonthlySummaryResponse::from).toList();
     }
 }

@@ -10,11 +10,15 @@ import com.fcproject.application.core.commands.finance.FinanceCommands.UpdateAcc
 import com.fcproject.application.core.commands.finance.FinanceCommands.UpdateCategory;
 import com.fcproject.application.core.commands.finance.FinanceCommands.UpdateEntry;
 import com.fcproject.application.core.domain.finance.FinanceModels.Account;
+import com.fcproject.application.core.domain.finance.FinanceModels.AccountBalance;
 import com.fcproject.application.core.domain.finance.FinanceModels.Category;
 import com.fcproject.application.core.domain.finance.FinanceModels.CategoryKind;
+import com.fcproject.application.core.domain.finance.FinanceModels.CategorySummary;
+import com.fcproject.application.core.domain.finance.FinanceModels.CurrencySummary;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryStatus;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryType;
 import com.fcproject.application.core.domain.finance.FinanceModels.FinancialEntry;
+import com.fcproject.application.core.domain.finance.FinanceModels.MonthlySummary;
 import com.fcproject.application.core.domain.finance.FinanceModels.PageResult;
 import com.fcproject.application.core.domain.finance.FinanceModels.ResourceStatus;
 import com.fcproject.application.core.domain.finance.FinanceModels.TransferResult;
@@ -23,6 +27,28 @@ import com.fcproject.application.core.domain.finance.FinanceModels.TransferStatu
 import com.fcproject.application.core.exceptions.BusinessConflictException;
 import com.fcproject.application.core.exceptions.BusinessRuleException;
 import com.fcproject.application.core.exceptions.ResourceNotFoundException;
+import com.fcproject.application.core.usecases.finance.accounts.ArchiveAccountUsecase;
+import com.fcproject.application.core.usecases.finance.accounts.CreateAccountUsecase;
+import com.fcproject.application.core.usecases.finance.accounts.GetAccountBalanceUsecase;
+import com.fcproject.application.core.usecases.finance.accounts.GetAccountUsecase;
+import com.fcproject.application.core.usecases.finance.accounts.ListAccountsUsecase;
+import com.fcproject.application.core.usecases.finance.accounts.UpdateAccountUsecase;
+import com.fcproject.application.core.usecases.finance.categories.ArchiveCategoryUsecase;
+import com.fcproject.application.core.usecases.finance.categories.CreateCategoryUsecase;
+import com.fcproject.application.core.usecases.finance.categories.ListCategoriesUsecase;
+import com.fcproject.application.core.usecases.finance.categories.UpdateCategoryUsecase;
+import com.fcproject.application.core.usecases.finance.entries.CancelEntryUsecase;
+import com.fcproject.application.core.usecases.finance.entries.CreateEntryUsecase;
+import com.fcproject.application.core.usecases.finance.entries.GetEntryUsecase;
+import com.fcproject.application.core.usecases.finance.entries.ListEntriesUsecase;
+import com.fcproject.application.core.usecases.finance.entries.UpdateEntryUsecase;
+import com.fcproject.application.core.usecases.finance.summaries.SummarizeByCategoryUsecase;
+import com.fcproject.application.core.usecases.finance.summaries.SummarizeTimelineUsecase;
+import com.fcproject.application.core.usecases.finance.summaries.SummarizeUsecase;
+import com.fcproject.application.core.usecases.finance.transfers.CancelTransferUsecase;
+import com.fcproject.application.core.usecases.finance.transfers.CreateTransferUsecase;
+import com.fcproject.application.core.usecases.finance.transfers.GetTransferUsecase;
+import com.fcproject.application.ports.inbound.finance.FinanceInPort;
 import com.fcproject.application.ports.outbound.finance.FinanceOutPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,7 +77,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class FinanceServiceTest {
+class FinanceUsecasesTest {
     private static final UUID USER_ID = UUID.fromString("10000000-0000-0000-0000-000000000001");
     private static final UUID ACCOUNT_ID = UUID.fromString("20000000-0000-0000-0000-000000000001");
     private static final UUID SECOND_ACCOUNT_ID = UUID.fromString("20000000-0000-0000-0000-000000000002");
@@ -63,11 +89,11 @@ class FinanceServiceTest {
     @Mock
     private FinanceOutPort finance;
 
-    private FinanceService service;
+    private FinanceInPort service;
 
     @BeforeEach
     void setUp() {
-        service = new FinanceService(finance, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new TestFinanceFacade(finance, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -425,5 +451,158 @@ class FinanceServiceTest {
                 id, USER_ID, accountId, null, groupId, type, new BigDecimal("50.0000"), status,
                 DATE, "Reserva", null, null, 0, canceledAt, NOW, canceledAt == null ? NOW : canceledAt
         );
+    }
+
+    private static final class TestFinanceFacade implements FinanceInPort {
+        private final CreateAccountUsecase createAccount;
+        private final ListAccountsUsecase listAccounts;
+        private final GetAccountUsecase getAccount;
+        private final UpdateAccountUsecase updateAccount;
+        private final ArchiveAccountUsecase archiveAccount;
+        private final GetAccountBalanceUsecase getAccountBalance;
+        private final CreateCategoryUsecase createCategory;
+        private final ListCategoriesUsecase listCategories;
+        private final UpdateCategoryUsecase updateCategory;
+        private final ArchiveCategoryUsecase archiveCategory;
+        private final CreateEntryUsecase createEntry;
+        private final GetEntryUsecase getEntry;
+        private final ListEntriesUsecase listEntries;
+        private final UpdateEntryUsecase updateEntry;
+        private final CancelEntryUsecase cancelEntry;
+        private final CreateTransferUsecase createTransfer;
+        private final GetTransferUsecase getTransfer;
+        private final CancelTransferUsecase cancelTransfer;
+        private final SummarizeUsecase summarize;
+        private final SummarizeByCategoryUsecase summarizeByCategory;
+        private final SummarizeTimelineUsecase summarizeTimeline;
+
+        private TestFinanceFacade(FinanceOutPort finance, Clock clock) {
+            this.createAccount = new CreateAccountUsecase(finance, clock);
+            this.listAccounts = new ListAccountsUsecase(finance);
+            this.getAccount = new GetAccountUsecase(finance);
+            this.updateAccount = new UpdateAccountUsecase(finance, clock);
+            this.archiveAccount = new ArchiveAccountUsecase(finance, clock);
+            this.getAccountBalance = new GetAccountBalanceUsecase(finance);
+            this.createCategory = new CreateCategoryUsecase(finance, clock);
+            this.listCategories = new ListCategoriesUsecase(finance);
+            this.updateCategory = new UpdateCategoryUsecase(finance, clock);
+            this.archiveCategory = new ArchiveCategoryUsecase(finance, clock);
+            this.createEntry = new CreateEntryUsecase(finance, clock);
+            this.getEntry = new GetEntryUsecase(finance);
+            this.listEntries = new ListEntriesUsecase(finance);
+            this.updateEntry = new UpdateEntryUsecase(finance, clock);
+            this.cancelEntry = new CancelEntryUsecase(finance, clock);
+            this.createTransfer = new CreateTransferUsecase(finance, clock);
+            this.getTransfer = new GetTransferUsecase(finance);
+            this.cancelTransfer = new CancelTransferUsecase(finance, clock);
+            this.summarize = new SummarizeUsecase(finance);
+            this.summarizeByCategory = new SummarizeByCategoryUsecase(finance);
+            this.summarizeTimeline = new SummarizeTimelineUsecase(finance);
+        }
+
+        @Override
+        public Account createAccount(CreateAccount command) {
+            return createAccount.createAccount(command);
+        }
+
+        @Override
+        public List<Account> listAccounts(AccountFilter filter) {
+            return listAccounts.listAccounts(filter);
+        }
+
+        @Override
+        public Account getAccount(UUID userId, UUID accountId) {
+            return getAccount.getAccount(userId, accountId);
+        }
+
+        @Override
+        public Account updateAccount(UpdateAccount command) {
+            return updateAccount.updateAccount(command);
+        }
+
+        @Override
+        public void archiveAccount(UUID userId, UUID accountId) {
+            archiveAccount.archiveAccount(userId, accountId);
+        }
+
+        @Override
+        public AccountBalance getBalance(UUID userId, UUID accountId) {
+            return getAccountBalance.getBalance(userId, accountId);
+        }
+
+        @Override
+        public Category createCategory(CreateCategory command) {
+            return createCategory.createCategory(command);
+        }
+
+        @Override
+        public List<Category> listCategories(UUID userId, CategoryKind kind, ResourceStatus status) {
+            return listCategories.listCategories(userId, kind, status);
+        }
+
+        @Override
+        public Category updateCategory(UpdateCategory command) {
+            return updateCategory.updateCategory(command);
+        }
+
+        @Override
+        public void archiveCategory(UUID userId, UUID categoryId) {
+            archiveCategory.archiveCategory(userId, categoryId);
+        }
+
+        @Override
+        public FinancialEntry createEntry(CreateEntry command) {
+            return createEntry.createEntry(command);
+        }
+
+        @Override
+        public FinancialEntry getEntry(UUID userId, UUID entryId) {
+            return getEntry.getEntry(userId, entryId);
+        }
+
+        @Override
+        public PageResult<FinancialEntry> listEntries(EntryFilter filter) {
+            return listEntries.listEntries(filter);
+        }
+
+        @Override
+        public FinancialEntry updateEntry(UpdateEntry command) {
+            return updateEntry.updateEntry(command);
+        }
+
+        @Override
+        public FinancialEntry cancelEntry(UUID userId, UUID entryId) {
+            return cancelEntry.cancelEntry(userId, entryId);
+        }
+
+        @Override
+        public TransferResult transfer(Transfer command) {
+            return createTransfer.transfer(command);
+        }
+
+        @Override
+        public TransferResult getTransfer(UUID userId, UUID transferId) {
+            return getTransfer.getTransfer(userId, transferId);
+        }
+
+        @Override
+        public TransferResult cancelTransfer(UUID userId, UUID transferId, String reason) {
+            return cancelTransfer.cancelTransfer(userId, transferId, reason);
+        }
+
+        @Override
+        public List<CurrencySummary> summarize(UUID userId, LocalDate from, LocalDate to) {
+            return summarize.summarize(userId, from, to);
+        }
+
+        @Override
+        public List<CategorySummary> summarizeByCategory(UUID userId, LocalDate from, LocalDate to) {
+            return summarizeByCategory.summarizeByCategory(userId, from, to);
+        }
+
+        @Override
+        public List<MonthlySummary> summarizeTimeline(UUID userId, LocalDate from, LocalDate to) {
+            return summarizeTimeline.summarizeTimeline(userId, from, to);
+        }
     }
 }

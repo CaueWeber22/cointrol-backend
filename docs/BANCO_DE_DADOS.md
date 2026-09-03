@@ -20,6 +20,7 @@ O schema `access` contém identidade e sessões. O schema `finance` contém cont
 | V8 | `src/main/resources/db/migration/V8__create_transfer_groups.sql` | Cria grupos de transferência e o vínculo atômico das pernas. |
 | V9 | `src/main/resources/db/migration/V9__add_transfer_cancellation.sql` | Adiciona estado, motivo, instante de cancelamento, versão e auditoria ao grupo. |
 | V10 | `src/main/resources/db/migration/V10__align_account_currency_type.sql` | Alinha `accounts.currency` de `CHAR(3)` para `VARCHAR(3)`, conforme o mapeamento JPA. |
+| V11 | `src/main/resources/db/migration/V11__add_security_controls.sql` | Cria proteção persistente de login e auditoria de eventos de segurança. |
 
 O Flyway mantém `access.flyway_schema_history` e aplica cada versão uma única vez.
 
@@ -30,6 +31,7 @@ erDiagram
     USERS ||--o{ USER_ROLES : has
     ROLES ||--o{ USER_ROLES : grants
     USERS ||--o{ REFRESH_TOKENS : owns
+    USERS ||--o{ SECURITY_AUDIT_EVENTS : referenced_by
     USERS ||--o{ ACCOUNTS : owns
     USERS ||--o{ CATEGORIES : owns
     USERS ||--o{ FINANCIAL_ENTRIES : owns
@@ -61,6 +63,21 @@ erDiagram
         varchar token_hash UK
         timestamptz expires_at
         timestamptz revoked_at
+    }
+    LOGIN_ATTEMPTS {
+        varchar identifier_hash PK
+        int failed_attempts
+        timestamptz window_started_at
+        timestamptz locked_until
+        timestamptz updated_at
+    }
+    SECURITY_AUDIT_EVENTS {
+        uuid id PK
+        uuid user_id FK
+        varchar identifier_hash
+        varchar event_type
+        varchar client_ip
+        timestamptz occurred_at
     }
     ACCOUNTS {
         uuid id PK
@@ -174,7 +191,7 @@ Essa migration não foi automatizada porque o repositório não informa se exist
 
 ## Teste automatizado
 
-`DatabaseMigrationTest` cria um PostgreSQL 17 vazio, aplica as dez migrations e valida tabelas, papéis, FKs, colunas de cancelamento e o tipo de `accounts.currency` nos schemas `access` e `finance`.
+`DatabaseMigrationTest` cria um PostgreSQL 17 vazio, aplica as onze migrations e valida tabelas, papéis, FKs, controles de segurança, colunas de cancelamento e o tipo de `accounts.currency` nos schemas `access` e `finance`.
 
 ```powershell
 docker info

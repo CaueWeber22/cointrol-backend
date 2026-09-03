@@ -1,6 +1,7 @@
 package com.fcproject.adapters.inbound.controllers;
 
 import com.fcproject.application.core.domain.auth.IssuedTokens;
+import com.fcproject.application.core.exceptions.LoginBlockedException;
 import com.fcproject.application.ports.inbound.AuthInPort;
 import com.fcproject.infrastructure.exceptions.GlobalHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,9 +14,11 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,7 +51,8 @@ class AuthControllerTest {
 
     @Test
     void returnsTheCanonicalTokenContract() throws Exception {
-        when(auth.login("user@example.com", "Valid@123"))
+        when(auth.login(org.mockito.ArgumentMatchers.eq("user@example.com"),
+                org.mockito.ArgumentMatchers.eq("Valid@123"), any()))
                 .thenReturn(new IssuedTokens("access", "refresh", 900L, "Bearer"));
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -64,5 +68,24 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.refreshToken").value("refresh"))
                 .andExpect(jsonPath("$.expiresIn").value(900))
                 .andExpect(jsonPath("$.acessToken").doesNotExist());
+    }
+
+    @Test
+    void returnsRetryAfterWhenLoginIsTemporarilyBlocked() throws Exception {
+        when(auth.login(org.mockito.ArgumentMatchers.eq("user@example.com"),
+                org.mockito.ArgumentMatchers.eq("invalid-password"), any()))
+                .thenThrow(new LoginBlockedException(120));
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "user@example.com",
+                                  "password": "invalid-password"
+                                }
+                                """))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "120"))
+                .andExpect(jsonPath("$.code").value("LOGIN_TEMPORARILY_BLOCKED"));
     }
 }

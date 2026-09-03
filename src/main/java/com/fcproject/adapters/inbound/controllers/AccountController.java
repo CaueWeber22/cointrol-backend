@@ -9,7 +9,12 @@ import com.fcproject.application.core.commands.finance.FinanceCommands.AccountFi
 import com.fcproject.application.core.commands.finance.FinanceCommands.CreateAccount;
 import com.fcproject.application.core.commands.finance.FinanceCommands.UpdateAccount;
 import com.fcproject.application.core.domain.finance.FinanceModels.ResourceStatus;
-import com.fcproject.application.ports.inbound.finance.FinanceInPort;
+import com.fcproject.application.ports.inbound.finance.ArchiveAccountInPort;
+import com.fcproject.application.ports.inbound.finance.CreateAccountInPort;
+import com.fcproject.application.ports.inbound.finance.GetAccountBalanceInPort;
+import com.fcproject.application.ports.inbound.finance.GetAccountInPort;
+import com.fcproject.application.ports.inbound.finance.ListAccountsInPort;
+import com.fcproject.application.ports.inbound.finance.UpdateAccountInPort;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,11 +35,29 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/accounts")
 public class AccountController {
-    private final FinanceInPort finance;
+    private final CreateAccountInPort createAccount;
+    private final ListAccountsInPort listAccounts;
+    private final GetAccountInPort getAccount;
+    private final UpdateAccountInPort updateAccount;
+    private final ArchiveAccountInPort archiveAccount;
+    private final GetAccountBalanceInPort getAccountBalance;
     private final CurrentUserIdProvider currentUser;
 
-    public AccountController(FinanceInPort finance, CurrentUserIdProvider currentUser) {
-        this.finance = finance;
+    public AccountController(
+            CreateAccountInPort createAccount,
+            ListAccountsInPort listAccounts,
+            GetAccountInPort getAccount,
+            UpdateAccountInPort updateAccount,
+            ArchiveAccountInPort archiveAccount,
+            GetAccountBalanceInPort getAccountBalance,
+            CurrentUserIdProvider currentUser
+    ) {
+        this.createAccount = createAccount;
+        this.listAccounts = listAccounts;
+        this.getAccount = getAccount;
+        this.updateAccount = updateAccount;
+        this.archiveAccount = archiveAccount;
+        this.getAccountBalance = getAccountBalance;
         this.currentUser = currentUser;
     }
 
@@ -43,7 +66,7 @@ public class AccountController {
             Principal principal,
             @Valid @RequestBody CreateAccountRequest request
     ) {
-        AccountResponse response = AccountResponse.from(finance.createAccount(new CreateAccount(
+        AccountResponse response = AccountResponse.from(createAccount.createAccount(new CreateAccount(
                 currentUser.get(principal), request.name(), request.type(), request.currency(), request.openingBalance()
         )));
         return ResponseEntity.created(URI.create("/api/v1/accounts/" + response.id())).body(response);
@@ -54,13 +77,13 @@ public class AccountController {
             Principal principal,
             @RequestParam(required = false) ResourceStatus status
     ) {
-        return finance.listAccounts(new AccountFilter(currentUser.get(principal), status))
+        return listAccounts.listAccounts(new AccountFilter(currentUser.get(principal), status))
                 .stream().map(AccountResponse::from).toList();
     }
 
     @GetMapping("/{id}")
     public AccountResponse get(Principal principal, @PathVariable UUID id) {
-        return AccountResponse.from(finance.getAccount(currentUser.get(principal), id));
+        return AccountResponse.from(getAccount.getAccount(currentUser.get(principal), id));
     }
 
     @PatchMapping("/{id}")
@@ -69,19 +92,19 @@ public class AccountController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdateAccountRequest request
     ) {
-        return AccountResponse.from(finance.updateAccount(
+        return AccountResponse.from(updateAccount.updateAccount(
                 new UpdateAccount(currentUser.get(principal), id, request.name())
         ));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> archive(Principal principal, @PathVariable UUID id) {
-        finance.archiveAccount(currentUser.get(principal), id);
+        archiveAccount.archiveAccount(currentUser.get(principal), id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/balance")
     public BalanceResponse balance(Principal principal, @PathVariable UUID id) {
-        return BalanceResponse.from(finance.getBalance(currentUser.get(principal), id));
+        return BalanceResponse.from(getAccountBalance.getBalance(currentUser.get(principal), id));
     }
 }

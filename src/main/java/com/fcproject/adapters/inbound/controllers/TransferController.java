@@ -5,7 +5,9 @@ import com.fcproject.adapters.inbound.dto.finance.FinanceRequests.TransferReques
 import com.fcproject.adapters.inbound.dto.finance.FinanceResponses.TransferResponse;
 import com.fcproject.adapters.inbound.security.CurrentUserIdProvider;
 import com.fcproject.application.core.commands.finance.FinanceCommands.Transfer;
-import com.fcproject.application.ports.inbound.finance.FinanceInPort;
+import com.fcproject.application.ports.inbound.finance.CancelTransferInPort;
+import com.fcproject.application.ports.inbound.finance.CreateTransferInPort;
+import com.fcproject.application.ports.inbound.finance.GetTransferInPort;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,11 +25,20 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/transfers")
 public class TransferController {
-    private final FinanceInPort finance;
+    private final CreateTransferInPort createTransfer;
+    private final GetTransferInPort getTransfer;
+    private final CancelTransferInPort cancelTransfer;
     private final CurrentUserIdProvider currentUser;
 
-    public TransferController(FinanceInPort finance, CurrentUserIdProvider currentUser) {
-        this.finance = finance;
+    public TransferController(
+            CreateTransferInPort createTransfer,
+            GetTransferInPort getTransfer,
+            CancelTransferInPort cancelTransfer,
+            CurrentUserIdProvider currentUser
+    ) {
+        this.createTransfer = createTransfer;
+        this.getTransfer = getTransfer;
+        this.cancelTransfer = cancelTransfer;
         this.currentUser = currentUser;
     }
 
@@ -37,7 +48,7 @@ public class TransferController {
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody TransferRequest request
     ) {
-        TransferResponse response = TransferResponse.from(finance.transfer(new Transfer(
+        TransferResponse response = TransferResponse.from(createTransfer.transfer(new Transfer(
                 currentUser.get(principal), request.sourceAccountId(), request.destinationAccountId(),
                 request.amount(), request.effectiveDate(), request.description(), idempotencyKey
         )));
@@ -46,7 +57,7 @@ public class TransferController {
 
     @GetMapping("/{id}")
     public TransferResponse get(Principal principal, @PathVariable UUID id) {
-        return TransferResponse.from(finance.getTransfer(currentUser.get(principal), id));
+        return TransferResponse.from(getTransfer.getTransfer(currentUser.get(principal), id));
     }
 
     @PostMapping("/{id}/cancel")
@@ -55,7 +66,7 @@ public class TransferController {
             @PathVariable UUID id,
             @Valid @RequestBody CancelTransferRequest request
     ) {
-        return TransferResponse.from(finance.cancelTransfer(
+        return TransferResponse.from(cancelTransfer.cancelTransfer(
                 currentUser.get(principal), id, request.reason()
         ));
     }

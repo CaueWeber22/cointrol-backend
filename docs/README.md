@@ -10,6 +10,7 @@ Este diretório concentra as decisões técnicas, instruções operacionais e ev
 - [ARQUITETURA.md](ARQUITETURA.md): limites hexagonais, componentes e fluxos principais.
 - [BANCO_DE_DADOS.md](BANCO_DE_DADOS.md): schema PostgreSQL, migrations Flyway e operação local.
 - [API.md](API.md): endpoints, payloads, autenticação e formato de erros.
+- [SEGURANCA.md](SEGURANCA.md): rate limiting, bloqueio de login, auditoria, retenção e rotação segura de JWT.
 - [CURLS_ENDPOINTS.md](CURLS_ENDPOINTS.md): exemplos `curl` prontos para cadastro, autenticação e operações financeiras.
 - [postman/Cointrol.postman_collection.json](postman/Cointrol.postman_collection.json): collection Postman v2.1 para importar e testar a API local organizada por pastas.
 - [AVALIACAO_TECNICA_E_ROADMAP.md](AVALIACAO_TECNICA_E_ROADMAP.md): auditoria original, backlog técnico e roadmap das features financeiras.
@@ -29,7 +30,8 @@ src/main/resources/db/migration/
 ├── V7__create_financial_entries.sql
 ├── V8__create_transfer_groups.sql
 ├── V9__add_transfer_cancellation.sql
-└── V10__align_account_currency_type.sql
+├── V10__align_account_currency_type.sql
+└── V11__add_security_controls.sql
 ```
 
 Eles não são duplicados em `/docs` para evitar duas fontes de verdade. O funcionamento e a política de evolução estão documentados em [BANCO_DE_DADOS.md](BANCO_DE_DADOS.md).

@@ -1,6 +1,8 @@
 package com.fcproject.infrastructure.exceptions;
 
 import com.fcproject.application.core.exceptions.InvalidRefreshTokenException;
+import com.fcproject.application.core.exceptions.InvalidCredentialsException;
+import com.fcproject.application.core.exceptions.LoginBlockedException;
 import com.fcproject.application.core.exceptions.InvalidValueException;
 import com.fcproject.application.core.exceptions.BusinessConflictException;
 import com.fcproject.application.core.exceptions.BusinessRuleException;
@@ -77,7 +79,7 @@ public class GlobalHandler extends ResponseEntityExceptionHandler {
         return response(HttpStatus.NOT_FOUND, "Resource not found", exception.getMessage(), "RESOURCE_NOT_FOUND");
     }
 
-    @ExceptionHandler({AuthenticationException.class, InvalidRefreshTokenException.class})
+    @ExceptionHandler({AuthenticationException.class, InvalidCredentialsException.class, InvalidRefreshTokenException.class})
     ResponseEntity<ProblemDetail> handleUnauthorized(RuntimeException exception) {
         return response(
                 HttpStatus.UNAUTHORIZED,
@@ -85,6 +87,20 @@ public class GlobalHandler extends ResponseEntityExceptionHandler {
                 "Invalid credentials or token",
                 "INVALID_CREDENTIALS"
         );
+    }
+
+    @ExceptionHandler(LoginBlockedException.class)
+    ResponseEntity<ProblemDetail> handleLoginBlocked(LoginBlockedException exception) {
+        ProblemDetail problem = problem(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "Too many login attempts",
+                "Login is temporarily blocked; retry later",
+                "LOGIN_TEMPORARILY_BLOCKED"
+        );
+        problem.setProperty("retryAfterSeconds", exception.getRetryAfterSeconds());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(exception.getRetryAfterSeconds()))
+                .body(problem);
     }
 
     @ExceptionHandler(Exception.class)

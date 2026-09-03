@@ -56,6 +56,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserById(UUID.fromString(jwt.getSubject()));
+                if (!userDetails.isEnabled()
+                        || !userDetails.isAccountNonLocked()
+                        || !userDetails.isAccountNonExpired()
+                        || !userDetails.isCredentialsNonExpired()) {
+                    throw new IllegalArgumentException("User account is not allowed to authenticate");
+                }
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
