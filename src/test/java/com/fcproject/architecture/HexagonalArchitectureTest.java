@@ -23,6 +23,7 @@ class HexagonalArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage(
                     "org.springframework..",
                     "jakarta.persistence..",
-                    "com.fasterxml.jackson.."
+                    "com.fasterxml.jackson..",
+                    "tools.jackson.."
             );
 }

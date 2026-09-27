@@ -1,6 +1,6 @@
 package com.fcproject.adapters.inbound.dto.response;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.fcproject.application.core.domain.auth.IssuedTokens;
 import org.junit.jupiter.api.Test;
 

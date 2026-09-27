@@ -1,6 +1,6 @@
 package com.fcproject.infrastructure.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.fcproject.application.core.domain.auth.SecurityAuditEvent;
 import com.fcproject.application.core.domain.auth.SecurityEventType;
 import com.fcproject.application.ports.outbound.SecurityAuditOutPort;

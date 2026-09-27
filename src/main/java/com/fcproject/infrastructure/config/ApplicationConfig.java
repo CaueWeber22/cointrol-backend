@@ -1,6 +1,6 @@
 package com.fcproject.infrastructure.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.fcproject.adapters.outbound.RefreshTokenAdapters;
 import com.fcproject.adapters.outbound.LoginAttemptPersistenceAdapter;
 import com.fcproject.adapters.outbound.SecurityAuditPersistenceAdapter;
