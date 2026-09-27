@@ -121,3 +121,11 @@ Em caso de suspeita de vazamento da chave ativa:
 3. revogue todos os refresh tokens ativos no banco;
 4. revise `security_audit_events` e logs da infraestrutura;
 5. preserve evidências conforme a política da organização.
+
+## Cookies web e CSRF
+
+A API web emite access_token e refresh_token somente em cookies HttpOnly; Secure; SameSite=None, sem Domain. Login/refresh retornam 204. O filtro preserva a validação JWT e consulta o estado/permissões do usuário; Authorization explícito tem precedência sobre cookie nos endpoints protegidos.
+
+Todas as mutações, inclusive cadastro/login/refresh/logout e clientes Bearer, exigem CSRF sincronizado via HttpSessionCsrfTokenRepository. A sessão armazena apenas CSRF, nunca autenticação. GET /api/v1/auth/csrf expõe o token CSRF com no-store. Login/refresh mudam o ID da sessão e invalidam o CSRF anterior; logout mantém a sessão anônima para retries idempotentes. Não há double-submit ingênuo nem dependência exclusiva de CORS.
+
+Consulte [o contrato completo para frontend](FRONTEND_AUTH_COOKIES.md), incluindo timeout, sessões por instância, CORS, recuperação de 403 e bloqueio de cookies de terceiros em Vercel → Render.

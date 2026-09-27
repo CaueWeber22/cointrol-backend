@@ -4,6 +4,8 @@ public record IssuedTokens(
         String accessToken,
         String refreshToken,
         long expiresIn,
-        String type
+        String type,
+        java.time.Instant issuedAt,
+        java.time.Instant refreshExpiresAt
 ) {
 }

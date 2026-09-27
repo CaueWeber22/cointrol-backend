@@ -16,7 +16,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -43,14 +47,37 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            CorsConfigurationSource corsConfigurationSource
+            CorsConfigurationSource corsConfigurationSource,
+            CsrfTokenRepository csrfTokenRepository
     ) throws Exception {
         return http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
+                .exceptionHandling(errors -> errors
+                        .accessDeniedHandler((request, response, exception) -> {
+                            boolean publicMutation = request.getRequestURI().startsWith("/api/v1/auth/")
+                                    || (request.getMethod().equals("POST") && request.getRequestURI().equals("/api/v1/users"));
+                            if (!publicMutation && SecurityContextHolder.getContext().getAuthentication() == null) {
+                                authenticationEntryPoint.commence(request, response,
+                                        new InsufficientAuthenticationException("Authentication required"));
+                                return;
+                            }
+                            response.setStatus(403);
+                            response.setContentType("application/problem+json");
+                            if (exception instanceof org.springframework.security.web.csrf.CsrfException) {
+                                response.getWriter().write("{\"status\":403,\"title\":\"Forbidden\",\"detail\":\"Obtain a new CSRF token and retry\",\"code\":\"CSRF_INVALID\"}");
+                            } else {
+                                response.getWriter().write("{\"status\":403,\"title\":\"Forbidden\",\"code\":\"ACCESS_DENIED\"}");
+                            }
+                        }))
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
@@ -58,8 +85,28 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(rateLimitFilter, SecurityContextHolderFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, CsrfFilter.class)
                 .build();
+    }
+
+    @Bean
+    CsrfTokenRepository csrfTokenRepository() {
+        return new HttpSessionCsrfTokenRepository();
+    }
+
+    // These filters must run only inside Spring Security, in the declared order.
+    @Bean
+    org.springframework.boot.web.servlet.FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(jwtAuthenticationFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    org.springframework.boot.web.servlet.FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(rateLimitFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean
@@ -82,13 +129,16 @@ public class SecurityConfig {
     private CorsConfigurationSource buildCorsConfigurationSource(String allowedOrigins) {
         CorsConfiguration configuration = new CorsConfiguration();
         if (allowedOrigins != null && !allowedOrigins.isBlank()) {
+            if (allowedOrigins.contains("*")) {
+                throw new IllegalArgumentException("CORS requires explicit origins; wildcards are forbidden");
+            }
             configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
                     .map(String::trim)
                     .filter(origin -> !origin.isBlank())
                     .toList());
         }
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key", "X-CSRF-TOKEN"));
         configuration.setExposedHeaders(List.of("Location"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

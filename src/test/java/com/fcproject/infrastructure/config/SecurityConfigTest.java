@@ -26,6 +26,16 @@ import static org.mockito.Mockito.when;
 @ExtendWith(OutputCaptureExtension.class)
 class SecurityConfigTest {
     @Test
+    void rejectsCorsWildcards() {
+        var config = new SecurityConfig(mock(JwtAuthenticationFilter.class), mock(RateLimitFilter.class),
+                mock(RestAuthenticationEntryPoint.class));
+        assertThatThrownBy(() -> config.corsConfigurationSource("*"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> config.corsConfigurationSource("https://*.vercel.app"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void configuresAuthenticationFromUserDetailsServiceWithoutWarning(CapturedOutput output) {
         UserDetailsService users = mock(UserDetailsService.class);
         new WebApplicationContextRunner()

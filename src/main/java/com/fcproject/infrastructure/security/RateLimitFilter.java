@@ -63,6 +63,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        if (request.getRequestURI().startsWith("/api/v1/auth/")) response.setHeader("Cache-Control", "no-store");
         RateLimitPolicy policy = policyFor(request);
         if (!enabled || policy == null) {
             filterChain.doFilter(request, response);

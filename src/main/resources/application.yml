@@ -20,6 +20,16 @@ spring:
         show_sql: false
 
 server:
+  servlet:
+    session:
+      timeout: ${CSRF_SESSION_TIMEOUT:30m}
+      tracking-modes: cookie
+      cookie:
+        name: COINTROL_CSRF_SESSION
+        path: /api/v1
+        http-only: true
+        secure: true
+        same-site: none
   error:
     include-message: never
     include-stacktrace: never
@@ -42,7 +52,7 @@ springdoc:
 
 security:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://financial-control-front-khaki.vercel.app}
   jwt:
     secret: ${JWT_SECRET}
     active-key-id: ${JWT_ACTIVE_KEY_ID:primary}

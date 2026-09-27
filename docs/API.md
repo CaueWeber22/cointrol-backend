@@ -2,7 +2,7 @@
 
 Base path: `/api/v1`
 Formato: JSON
-Autenticação: `Authorization: Bearer <accessToken>`
+Autenticação web: cookies HttpOnly. Veja [contrato frontend e CSRF](FRONTEND_AUTH_COOKIES.md).
 
 ## Cadastro
 
@@ -47,44 +47,21 @@ O header `Location` aponta para `/api/v1/users/me`.
 }
 ```
 
-Resposta `200 OK`:
+Resposta: **204 No Content**, sem tokens no JSON. Emite access_token e refresh_token por Set-Cookie separados, HttpOnly, Secure, SameSite=None e sem Domain. Paths /api/v1 e /api/v1/auth, respectivamente. Max-Age acompanha a expiração real dos tokens.
 
-```json
-{
-  "accessToken": "<jwt>",
-  "refreshToken": "<opaque-token>",
-  "expiresIn": 900,
-  "type": "Bearer"
-}
-```
+## CSRF obrigatório
 
-`expiresIn` é expresso em segundos.
-
-Depois de cinco falhas dentro da janela padrão de 15 minutos, o identificador fica temporariamente bloqueado. A resposta usa `429 LOGIN_TEMPORARILY_BLOCKED` e informa `Retry-After` sem revelar se o usuário existe.
+GET /api/v1/auth/csrf com credenciais retorna 200 e JSON `{"token":"<csrf>","headerName":"X-CSRF-TOKEN"}`, vinculado à sessão HttpOnly do backend. Envie o header em toda mutação, incluindo cadastro, login, refresh e logout. CSRF inválido retorna 403 CSRF_INVALID. Após login/refresh, obtenha novo CSRF. Todas as respostas de autenticação usam Cache-Control: no-store.
 
 ## Renovar sessão
 
-`POST /api/v1/auth/refresh`
-
-```json
-{
-  "refreshToken": "<opaque-token>"
-}
-```
-
-Retorna um novo par de tokens. O refresh token anterior é revogado e não deve ser reutilizado.
+POST /api/v1/auth/refresh recebe refresh_token exclusivamente pelo cookie, sem exigir corpo. Retorna 204 e substitui os cookies. O refresh anterior é revogado e não pode ser reutilizado. Cookie ausente/inválido/expirado retorna 401 quando o CSRF é válido.
 
 ## Logout
 
-`POST /api/v1/auth/logout`
+POST /api/v1/auth/logout recebe refresh_token pelo cookie, sem exigir corpo. Revoga-o e expira ambos os cookies com mesmos nomes, caminhos e escopo. Retorna 204 inclusive quando ausente, desconhecido ou já revogado; exige CSRF válido. A sessão CSRF anônima permanece para permitir retries idempotentes.
 
-```json
-{
-  "refreshToken": "<opaque-token>"
-}
-```
-
-Resposta: `204 No Content`. A operação é idempotente para tokens já revogados ou desconhecidos.
+O [contrato frontend](FRONTEND_AUTH_COOKIES.md) detalha erros, exemplos Angular, precedência Bearer, variáveis e limitações cross-site.
 
 ## Perfil autenticado
 
@@ -294,7 +271,7 @@ Exemplo de validação `400`:
 |---:|---|
 | 400 | Payload/regra de validação inválida. |
 | 401 | Credencial, access token ou refresh token inválido. |
-| 403 | Usuário autenticado sem permissão. |
+| 403 | CSRF inválido ou usuário autenticado sem permissão. |
 | 404 | Recurso inexistente. |
 | 409 | E-mail duplicado ou violação de constraint de negócio. |
 | 429 | Rate limit excedido ou login temporariamente bloqueado. |

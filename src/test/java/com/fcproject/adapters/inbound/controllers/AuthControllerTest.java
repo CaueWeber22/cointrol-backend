@@ -32,7 +32,7 @@ class AuthControllerTest {
     void setUp() {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
-        mockMvc = standaloneSetup(new AuthController(auth))
+        mockMvc = standaloneSetup(new AuthController(auth, new com.fcproject.infrastructure.security.AuthCookies(java.time.Clock.systemUTC()), new org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository()))
                 .setControllerAdvice(new GlobalHandler())
                 .setValidator(validator)
                 .build();
@@ -53,7 +53,7 @@ class AuthControllerTest {
     void returnsTheCanonicalTokenContract() throws Exception {
         when(auth.login(org.mockito.ArgumentMatchers.eq("user@example.com"),
                 org.mockito.ArgumentMatchers.eq("Valid@123"), any()))
-                .thenReturn(new IssuedTokens("access", "refresh", 900L, "Bearer"));
+                .thenReturn(new IssuedTokens("access", "refresh", 900L, "Bearer", java.time.Instant.now(), java.time.Instant.now().plusSeconds(2592000)));
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -63,10 +63,10 @@ class AuthControllerTest {
                                   "password": "Valid@123"
                                 }
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("access"))
-                .andExpect(jsonPath("$.refreshToken").value("refresh"))
-                .andExpect(jsonPath("$.expiresIn").value(900))
+                .andExpect(status().isNoContent())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(""))
+                .andExpect(header().exists("Set-Cookie"))
+                .andExpect(jsonPath("$.expiresIn").doesNotExist())
                 .andExpect(jsonPath("$.acessToken").doesNotExist());
     }
 

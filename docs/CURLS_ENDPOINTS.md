@@ -6,12 +6,13 @@ Os comandos usam sintaxe compatível com Bash, Git Bash, WSL, Linux e macOS. No 
 
 ## Preparação
 
-Com a aplicação disponível em `http://localhost:8080`, configure as variáveis abaixo:
+Use HTTPS para testar cookies Secure de forma confiável. O exemplo usa localhost; veja [o contrato web](FRONTEND_AUTH_COOKIES.md) para produção e CSRF.
 
 ```bash
 export API_URL="http://localhost:8080"
-export ACCESS_TOKEN="cole-o-access-token-aqui"
-export REFRESH_TOKEN="cole-o-refresh-token-aqui"
+export COOKIE_JAR="$(mktemp)"
+csrf() { curl --silent --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" "$API_URL/api/v1/auth/csrf" | jq -r .token; }
+export CSRF_TOKEN=$(csrf)
 
 export ACCOUNT_ID="20000000-0000-0000-0000-000000000001"
 export DESTINATION_ACCOUNT_ID="20000000-0000-0000-0000-000000000002"
@@ -36,7 +37,7 @@ curl --request GET \
 ### Cadastrar usuário
 
 ```bash
-curl --request POST \
+curl --request POST --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/users" \
   --header "Content-Type: application/json" \
   --data '{
@@ -53,7 +54,7 @@ curl --request POST \
 ### Login
 
 ```bash
-curl --request POST \
+curl --request POST --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/auth/login" \
   --header "Content-Type: application/json" \
   --data '{
@@ -62,46 +63,37 @@ curl --request POST \
   }'
 ```
 
-Copie `accessToken` e `refreshToken` da resposta para `ACCESS_TOKEN` e `REFRESH_TOKEN`.
-
-Com `jq`, isso pode ser automatizado:
+Login responde 204 e grava os cookies no cookie jar. Renove CSRF após login:
 
 ```bash
-TOKENS=$(curl --silent --request POST \
-  --url "$API_URL/api/v1/auth/login" \
-  --header "Content-Type: application/json" \
-  --data '{"email":"ada@example.com","password":"Valid@123"}')
-
-export ACCESS_TOKEN=$(echo "$TOKENS" | jq -r '.accessToken')
-export REFRESH_TOKEN=$(echo "$TOKENS" | jq -r '.refreshToken')
+export CSRF_TOKEN=$(csrf)
 ```
 
 ### Renovar tokens
 
-O refresh token usado é revogado e a resposta contém um novo par de tokens.
-
 ```bash
-curl --request POST \
-  --url "$API_URL/api/v1/auth/refresh" \
-  --header "Content-Type: application/json" \
-  --data "{\"refreshToken\":\"$REFRESH_TOKEN\"}"
+curl --request POST --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" \
+  --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
+  --url "$API_URL/api/v1/auth/refresh"
+export CSRF_TOKEN=$(csrf)
 ```
 
 ### Logout
 
 ```bash
-curl --request POST \
-  --url "$API_URL/api/v1/auth/logout" \
-  --header "Content-Type: application/json" \
-  --data "{\"refreshToken\":\"$REFRESH_TOKEN\"}"
+curl --request POST --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" \
+  --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
+  --url "$API_URL/api/v1/auth/logout"
 ```
+
+Faça logout apenas ao terminar as chamadas protegidas abaixo. Proteja e remova o arquivo temporário do cookie jar ao finalizar; ele contém credenciais e não deve ser versionado.
 
 ### Consultar perfil autenticado
 
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/users/me" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ## Contas financeiras
@@ -111,9 +103,9 @@ Tipos aceitos: `CHECKING`, `SAVINGS`, `CASH` e `INVESTMENT`.
 ### Criar conta
 
 ```bash
-curl --request POST \
+curl --request POST --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/accounts" \
-  --header "Authorization: Bearer $ACCESS_TOKEN" \
+  --cookie "$COOKIE_JAR" \
   --header "Content-Type: application/json" \
   --data '{
     "name": "Conta principal",
@@ -132,7 +124,7 @@ Sem filtro:
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/accounts" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 Filtrando por `ACTIVE` ou `ARCHIVED`:
@@ -140,7 +132,7 @@ Filtrando por `ACTIVE` ou `ARCHIVED`:
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/accounts?status=ACTIVE" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ### Consultar conta
@@ -148,15 +140,15 @@ curl --request GET \
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/accounts/$ACCOUNT_ID" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ### Renomear conta
 
 ```bash
-curl --request PATCH \
+curl --request PATCH --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/accounts/$ACCOUNT_ID" \
-  --header "Authorization: Bearer $ACCESS_TOKEN" \
+  --cookie "$COOKIE_JAR" \
   --header "Content-Type: application/json" \
   --data '{"name":"Conta principal atualizada"}'
 ```
@@ -166,15 +158,15 @@ curl --request PATCH \
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/accounts/$ACCOUNT_ID/balance" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ### Arquivar conta
 
 ```bash
-curl --request DELETE \
+curl --request DELETE --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/accounts/$ACCOUNT_ID" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ## Categorias
@@ -184,9 +176,9 @@ Tipos aceitos: `INCOME` e `EXPENSE`.
 ### Criar categoria
 
 ```bash
-curl --request POST \
+curl --request POST --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/categories" \
-  --header "Authorization: Bearer $ACCESS_TOKEN" \
+  --cookie "$COOKIE_JAR" \
   --header "Content-Type: application/json" \
   --data '{
     "name": "Supermercado",
@@ -203,7 +195,7 @@ Sem filtros:
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/categories" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 Com filtros opcionais:
@@ -211,15 +203,15 @@ Com filtros opcionais:
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/categories?kind=EXPENSE&status=ACTIVE" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ### Renomear categoria
 
 ```bash
-curl --request PATCH \
+curl --request PATCH --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/categories/$CATEGORY_ID" \
-  --header "Authorization: Bearer $ACCESS_TOKEN" \
+  --cookie "$COOKIE_JAR" \
   --header "Content-Type: application/json" \
   --data '{"name":"Mercado e alimentação"}'
 ```
@@ -227,9 +219,9 @@ curl --request PATCH \
 ### Arquivar categoria
 
 ```bash
-curl --request DELETE \
+curl --request DELETE --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/categories/$CATEGORY_ID" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ## Lançamentos financeiros
@@ -241,9 +233,9 @@ Criações exigem uma `Idempotency-Key` exclusiva. Reutilize a mesma chave somen
 Tipos de criação aceitos: `INCOME` e `EXPENSE`. Status aceitos: `PENDING` e `CLEARED`.
 
 ```bash
-curl --request POST \
+curl --request POST --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/transactions" \
-  --header "Authorization: Bearer $ACCESS_TOKEN" \
+  --cookie "$COOKIE_JAR" \
   --header "Content-Type: application/json" \
   --header "Idempotency-Key: entry-2026-08-16-001" \
   --data "{
@@ -264,7 +256,7 @@ Use o `id` retornado para atualizar `TRANSACTION_ID`.
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/transactions/$TRANSACTION_ID" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ### Listar extrato
@@ -274,7 +266,7 @@ Sem filtros, usando a paginação padrão:
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/transactions" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 Com todos os filtros disponíveis:
@@ -282,7 +274,7 @@ Com todos os filtros disponíveis:
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/transactions?accountId=$ACCOUNT_ID&categoryId=$CATEGORY_ID&type=EXPENSE&status=CLEARED&from=2026-08-01&to=2026-08-31&page=0&size=20" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 `page` começa em zero e `size` deve ficar entre 1 e 100.
@@ -292,9 +284,9 @@ curl --request GET \
 Envie somente os campos que devem mudar. O tipo do lançamento não é alterável.
 
 ```bash
-curl --request PATCH \
+curl --request PATCH --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/transactions/$TRANSACTION_ID" \
-  --header "Authorization: Bearer $ACCESS_TOKEN" \
+  --cookie "$COOKIE_JAR" \
   --header "Content-Type: application/json" \
   --data '{
     "amount": 159.90,
@@ -309,9 +301,9 @@ Também podem ser enviados `accountId` e `categoryId`. Pernas de transferência 
 ### Cancelar lançamento
 
 ```bash
-curl --request POST \
+curl --request POST --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/transactions/$TRANSACTION_ID/cancel" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 Pernas de transferência devem ser canceladas pelo grupo da transferência.
@@ -323,9 +315,9 @@ Pernas de transferência devem ser canceladas pelo grupo da transferência.
 As contas precisam pertencer ao mesmo usuário, estar ativas, ter a mesma moeda e ser diferentes.
 
 ```bash
-curl --request POST \
+curl --request POST --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/transfers" \
-  --header "Authorization: Bearer $ACCESS_TOKEN" \
+  --cookie "$COOKIE_JAR" \
   --header "Content-Type: application/json" \
   --header "Idempotency-Key: transfer-2026-08-16-001" \
   --data "{
@@ -344,7 +336,7 @@ A resposta contém o grupo e as pernas `TRANSFER_OUT` e `TRANSFER_IN`. Use o `id
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/transfers/$TRANSFER_ID" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ### Cancelar transferência
@@ -352,9 +344,9 @@ curl --request GET \
 O cancelamento registra o motivo e o instante e cancela as duas pernas atomicamente.
 
 ```bash
-curl --request POST \
+curl --request POST --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "X-CSRF-TOKEN: $CSRF_TOKEN" \
   --url "$API_URL/api/v1/transfers/$TRANSFER_ID/cancel" \
-  --header "Authorization: Bearer $ACCESS_TOKEN" \
+  --cookie "$COOKIE_JAR" \
   --header "Content-Type: application/json" \
   --data '{"reason":"Conta de destino incorreta"}'
 ```
@@ -370,7 +362,7 @@ As datas `from` e `to` são obrigatórias e usam o formato `YYYY-MM-DD`.
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/summary?from=2026-08-01&to=2026-08-31" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ### Resumo por categoria
@@ -378,7 +370,7 @@ curl --request GET \
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/summary/by-category?from=2026-08-01&to=2026-08-31" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ### Linha do tempo mensal
@@ -386,12 +378,12 @@ curl --request GET \
 ```bash
 curl --request GET \
   --url "$API_URL/api/v1/summary/timeline?from=2026-01-01&to=2026-12-31" \
-  --header "Authorization: Bearer $ACCESS_TOKEN"
+  --cookie "$COOKIE_JAR"
 ```
 
 ## Observações de uso
 
-- Endpoints protegidos exigem `Authorization: Bearer $ACCESS_TOKEN`.
+- Endpoints protegidos exigem cookie de acesso; mutações também exigem CSRF.
 - Payloads JSON exigem `Content-Type: application/json`.
 - Datas usam o padrão ISO `YYYY-MM-DD`.
 - Valores monetários precisam ser positivos e aceitam até quatro casas decimais.

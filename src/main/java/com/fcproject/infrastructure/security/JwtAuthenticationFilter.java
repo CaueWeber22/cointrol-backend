@@ -38,20 +38,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        // Refresh/logout must remain usable when the browser still sends an expired access cookie.
+        return request.getRequestURI().startsWith("/api/v1/auth/")
+                || request.getMethod().equals("OPTIONS");
+    }
+
+    @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String token = null;
+        // An explicit Authorization header wins; never fall back after an invalid header.
+        if (authorizationHeader != null) {
+            token = authorizationHeader.startsWith(BEARER_PREFIX)
+                    ? authorizationHeader.substring(BEARER_PREFIX.length()) : "";
+        } else if (request.getCookies() != null) {
+            for (var cookie : request.getCookies()) {
+                if (cookie.getName().equals("access_token")) {
+                    token = cookie.getValue();
+                    break;
+                }
+            }
+        }
 
-        if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
+        if (token == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            String token = authorizationHeader.substring(BEARER_PREFIX.length());
             DecodedJWT jwt = jwtTokens.validate(token);
 
             if (SecurityContextHolder.getContext().getAuthentication() == null) {

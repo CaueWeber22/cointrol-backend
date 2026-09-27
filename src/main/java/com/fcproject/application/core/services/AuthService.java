@@ -171,7 +171,7 @@ public class AuthService implements AuthInPort {
                 accessTokens.generate(user, issuedAt),
                 refreshToken,
                 accessTokens.expirationSeconds(),
-                TOKEN_TYPE
+                TOKEN_TYPE, issuedAt, issuedAt.plus(refreshTokenExpirationDays, ChronoUnit.DAYS)
         );
     }
 
