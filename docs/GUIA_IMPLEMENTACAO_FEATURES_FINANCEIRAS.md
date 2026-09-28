@@ -35,7 +35,7 @@ Estas regras são a linha de base do MVP. Qualquer mudança deve ser registrada 
 
 - Usar `BigDecimal` em Java e `NUMERIC(19,4)` no PostgreSQL.
 - Nunca usar `double` ou `float` para valores monetários.
-- Valores informados devem ser maiores que zero.
+- Valores informados devem ser maiores que zero, exceto o saldo inicial de conta, que pode ser zero.
 - O sentido financeiro é determinado pelo tipo do lançamento, não pelo sinal recebido na API.
 - Arredondamento deve ser explícito e compatível com a moeda da conta.
 
@@ -141,7 +141,7 @@ Enums iniciais:
 
 | Conceito | Valores iniciais |
 |---|---|
-| Tipo de conta | `CHECKING`, `SAVINGS`, `CASH`, `INVESTMENT` |
+| Tipo de conta | `CHECKING`, `SAVINGS`, `INVESTMENT` |
 | Estado da conta | `ACTIVE`, `ARCHIVED` |
 | Tipo de categoria | `INCOME`, `EXPENSE` |
 | Estado da categoria | `ACTIVE`, `ARCHIVED` |

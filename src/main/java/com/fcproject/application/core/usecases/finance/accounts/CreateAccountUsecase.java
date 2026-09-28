@@ -2,6 +2,7 @@ package com.fcproject.application.core.usecases.finance.accounts;
 
 import com.fcproject.application.core.commands.finance.FinanceCommands.CreateAccount;
 import com.fcproject.application.core.domain.finance.FinanceModels.Account;
+import com.fcproject.application.core.domain.finance.FinanceModels.AccountType;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryStatus;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryType;
 import com.fcproject.application.core.domain.finance.FinanceModels.FinancialEntry;
@@ -20,7 +21,7 @@ import static com.fcproject.application.core.utils.finance.FinanceValidationUtil
 import static com.fcproject.application.core.utils.finance.FinanceValidationUtil.normalizeName;
 import static com.fcproject.application.core.utils.finance.FinanceValidationUtil.requireUser;
 import static com.fcproject.application.core.utils.finance.FinanceValidationUtil.rule;
-import static com.fcproject.application.core.utils.finance.FinanceValidationUtil.validateAmount;
+import static com.fcproject.application.core.utils.finance.FinanceValidationUtil.validateNonNegativeAmount;
 
 public class CreateAccountUsecase implements CreateAccountInPort {
     private final FinanceOutPort finance;
@@ -39,6 +40,9 @@ public class CreateAccountUsecase implements CreateAccountInPort {
         if (command.type() == null) {
             throw rule("INVALID_ACCOUNT_TYPE", "Account type is required");
         }
+        if (command.type() == AccountType.CASH) {
+            throw rule("INVALID_ACCOUNT_TYPE", "Cash accounts are no longer supported");
+        }
         if (finance.existsActiveAccountName(command.userId(), name, null)) {
             throw conflict("ACCOUNT_NAME_CONFLICT", "An active account with this name already exists");
         }
@@ -50,7 +54,7 @@ public class CreateAccountUsecase implements CreateAccountInPort {
         if (command.openingBalance() == null) {
             return finance.saveAccount(account);
         }
-        BigDecimal amount = validateAmount(command.openingBalance());
+        BigDecimal amount = validateNonNegativeAmount(command.openingBalance());
         FinancialEntry openingEntry = new FinancialEntry(
                 UUID.randomUUID(), command.userId(), account.id(), null, null,
                 EntryType.OPENING_BALANCE, amount, EntryStatus.CLEARED,

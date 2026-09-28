@@ -66,6 +66,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static com.fcproject.application.core.domain.finance.FinanceModels.AccountType.CHECKING;
+import static com.fcproject.application.core.domain.finance.FinanceModels.AccountType.CASH;
 import static com.fcproject.application.core.domain.finance.FinanceModels.AccountType.SAVINGS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -128,6 +129,34 @@ class FinanceUsecasesTest {
                         && entry.amount().equals(new BigDecimal("250.0000"))
                         && entry.accountId().equals(created.id())
         ));
+    }
+
+    @Test
+    void acceptsZeroOpeningBalance() {
+        when(finance.existsActiveAccountName(USER_ID, "Conta Zero", null)).thenReturn(false);
+        when(finance.saveAccountWithOpeningBalance(any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Account created = service.createAccount(new CreateAccount(
+                USER_ID, "Conta Zero", CHECKING, "BRL", BigDecimal.ZERO
+        ));
+
+        assertEquals("Conta Zero", created.name());
+        verify(finance).saveAccountWithOpeningBalance(any(), argThat(entry ->
+                entry.type() == EntryType.OPENING_BALANCE
+                        && entry.status() == EntryStatus.CLEARED
+                        && entry.amount().equals(new BigDecimal("0.0000"))
+                        && entry.accountId().equals(created.id())
+        ));
+    }
+
+    @Test
+    void rejectsCashAccountCreation() {
+        assertThrows(BusinessRuleException.class, () ->
+                service.createAccount(new CreateAccount(USER_ID, "Dinheiro", CASH, "BRL", null)));
+
+        verify(finance, never()).saveAccount(any());
+        verify(finance, never()).saveAccountWithOpeningBalance(any(), any());
     }
 
     @Test

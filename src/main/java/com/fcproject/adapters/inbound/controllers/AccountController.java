@@ -67,7 +67,8 @@ public class AccountController {
             @Valid @RequestBody CreateAccountRequest request
     ) {
         AccountResponse response = AccountResponse.from(createAccount.createAccount(new CreateAccount(
-                currentUser.get(principal), request.name(), request.type(), request.currency(), request.openingBalance()
+                currentUser.get(principal), request.name(), request.type().toDomain(), request.currency(),
+                request.openingBalance()
         )));
         return ResponseEntity.created(URI.create("/api/v1/accounts/" + response.id())).body(response);
     }

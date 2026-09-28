@@ -37,14 +37,14 @@ O sistema deve proteger três invariantes centrais:
 
 - Uma conta pertence a exatamente um usuário.
 - Conta possui nome, tipo, moeda, status, versão e timestamps.
-- Tipos suportados: `CHECKING`, `SAVINGS`, `CASH`, `INVESTMENT`.
+- Tipos aceitos para novas contas: `CHECKING`, `SAVINGS`, `INVESTMENT`.
 - Moeda deve ser um código ISO 4217 válido, normalizado para maiúsculas.
 - Nome é obrigatório, normalizado por espaços e limitado a 100 caracteres.
 - Nomes ativos devem ser únicos por usuário.
 - Conta nasce `ACTIVE`.
 - Conta arquivada não recebe novos lançamentos nem transferências.
 - Arquivar conta é idempotente.
-- Saldo inicial, quando informado, vira lançamento `OPENING_BALANCE` confirmado e persistido junto com a conta.
+- Saldo inicial, quando informado, pode ser zero ou positivo, vira lançamento `OPENING_BALANCE` confirmado e persistido junto com a conta.
 - Não existe campo de saldo editável diretamente.
 
 ## Categorias

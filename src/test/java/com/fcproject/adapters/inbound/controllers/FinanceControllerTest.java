@@ -94,6 +94,42 @@ class FinanceControllerTest {
     }
 
     @Test
+    void acceptsZeroOpeningBalanceForAccountCreation() throws Exception {
+        when(finance.createAccount(any())).thenReturn(new Account(
+                ACCOUNT_ID, USER_ID, "Conta principal", AccountType.CHECKING, "BRL",
+                ResourceStatus.ACTIVE, 0, NOW, NOW
+        ));
+
+        mockMvc.perform(post("/api/v1/accounts")
+                        .principal(PRINCIPAL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Conta principal",
+                                  "type": "CHECKING",
+                                  "currency": "BRL",
+                                  "openingBalance": 0
+                                }
+                                """))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void rejectsCashAccountTypeOnCreation() throws Exception {
+        mockMvc.perform(post("/api/v1/accounts")
+                        .principal(PRINCIPAL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Dinheiro",
+                                  "type": "CASH",
+                                  "currency": "BRL"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void validatesAccountPayload() throws Exception {
         mockMvc.perform(post("/api/v1/accounts")
                         .principal(PRINCIPAL)

@@ -98,7 +98,7 @@ curl --request GET \
 
 ## Contas financeiras
 
-Tipos aceitos: `CHECKING`, `SAVINGS`, `CASH` e `INVESTMENT`.
+Tipos aceitos para novas contas: `CHECKING`, `SAVINGS` e `INVESTMENT`.
 
 ### Criar conta
 
@@ -115,7 +115,7 @@ curl --request POST --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" --header "
   }'
 ```
 
-`openingBalance` é opcional. Use o `id` retornado para atualizar `ACCOUNT_ID`.
+`openingBalance` é opcional e pode ser zero. Use o `id` retornado para atualizar `ACCOUNT_ID`.
 
 ### Listar contas
 

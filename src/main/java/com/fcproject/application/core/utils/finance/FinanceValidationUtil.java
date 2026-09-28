@@ -57,6 +57,16 @@ public final class FinanceValidationUtil {
         return amount.setScale(4);
     }
 
+    public static BigDecimal validateNonNegativeAmount(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0 || amount.scale() > 4) {
+            throw rule("INVALID_MONEY_AMOUNT", "Amount must be zero or positive and have at most four decimal places");
+        }
+        if (amount.precision() - amount.scale() > 15) {
+            throw rule("INVALID_MONEY_AMOUNT", "Amount exceeds the supported limit");
+        }
+        return amount.setScale(4);
+    }
+
     public static String normalizeCurrency(String value) {
         if (value == null || value.isBlank()) {
             throw rule("INVALID_CURRENCY", "Currency is required");

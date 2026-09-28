@@ -86,9 +86,9 @@ Todos os endpoints desta seção exigem access token. O proprietário é obtido 
 }
 ```
 
-`openingBalance` é opcional. Quando informado, é persistido atomicamente como lançamento `OPENING_BALANCE`; não existe campo de saldo editável.
+`openingBalance` é opcional e pode ser zero. Quando informado, é persistido atomicamente como lançamento `OPENING_BALANCE`; não existe campo de saldo editável.
 
-Tipos: `CHECKING`, `SAVINGS`, `CASH` e `INVESTMENT`.
+Tipos aceitos na criação: `CHECKING`, `SAVINGS` e `INVESTMENT`.
 
 Resposta `201 Created`, com `Location: /api/v1/accounts/{id}`.
 

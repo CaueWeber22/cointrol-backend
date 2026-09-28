@@ -21,11 +21,21 @@ public final class FinanceRequests {
 
     public record CreateAccountRequest(
             @NotBlank @Size(max = 100) String name,
-            @NotNull AccountType type,
+            @NotNull CreateAccountType type,
             @NotBlank @Pattern(regexp = "^[A-Za-z]{3}$") String currency,
-            @DecimalMin(value = "0", inclusive = false) @Digits(integer = 15, fraction = 4)
+            @DecimalMin(value = "0", inclusive = true) @Digits(integer = 15, fraction = 4)
             BigDecimal openingBalance
     ) {
+    }
+
+    public enum CreateAccountType {
+        CHECKING,
+        SAVINGS,
+        INVESTMENT;
+
+        public AccountType toDomain() {
+            return AccountType.valueOf(name());
+        }
     }
 
     public record UpdateAccountRequest(@NotBlank @Size(max = 100) String name) {
