@@ -102,8 +102,13 @@ public class ApplicationConfig {
     }
 
     @Bean
-    UserOutPort userOutPort(UserJPARepository users, RoleJPARepository roles) {
-        return new UserAdapters(users, roles);
+    UserOutPort userOutPort(
+            UserJPARepository users,
+            RoleJPARepository roles,
+            CategoryJPARepository categories,
+            Clock clock
+    ) {
+        return new UserAdapters(users, roles, categories, clock);
     }
 
     @Bean

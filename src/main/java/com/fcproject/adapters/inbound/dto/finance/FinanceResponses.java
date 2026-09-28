@@ -43,14 +43,17 @@ public final class FinanceResponses {
             String name,
             String kind,
             String status,
+            String source,
+            String defaultKey,
             long version,
             Instant createdAt,
             Instant updatedAt
     ) {
         public static CategoryResponse from(Category value) {
             return new CategoryResponse(
-                    value.id(), value.name(), value.kind().name(), value.status().name(), value.version(),
-                    value.createdAt(), value.updatedAt()
+                    value.id(), value.name(), value.kind().name(), value.status().name(), value.source().name(),
+                    value.defaultKey() == null ? null : value.defaultKey().name(), value.version(), value.createdAt(),
+                    value.updatedAt()
             );
         }
     }

@@ -198,6 +198,8 @@ curl --request GET \
   --cookie "$COOKIE_JAR"
 ```
 
+Categorias padrao sao criadas por usuario no cadastro e aparecem na resposta com `source: "DEFAULT"` e `defaultKey` preenchido. Categorias criadas manualmente retornam `source: "CUSTOM"` e `defaultKey: null`.
+
 Com filtros opcionais:
 
 ```bash

@@ -110,7 +110,7 @@ O teste ignorado é o de migrations com PostgreSQL/Testcontainers, pois o Docker
 ## Limites intencionais deste MVP
 
 - Não há conversão cambial.
-- Não há categorias globais pré-carregadas.
+- Categorias padrão não são globais compartilhadas; elas são materializadas por usuário com `source=DEFAULT` e `default_key`.
 - Não há recorrências, parcelas, orçamentos, metas, cartões ou importação.
 - Resumos são calculados sobre lançamentos carregados no período; otimizações SQL podem ser introduzidas quando houver volume medido.
 - Transferências canceladas não podem ser reabertas; uma correção posterior exige nova transferência.
@@ -118,7 +118,7 @@ O teste ignorado é o de migrations com PostgreSQL/Testcontainers, pois o Docker
 ## Próximas melhorias recomendadas
 
 1. Executar o teste Testcontainers e um smoke test completo com Docker ativo.
-2. Criar categorias padrão no onboarding.
+2. Expandir ou configurar o catálogo canônico de categorias padrão.
 3. Evoluir os resumos para projections SQL após medir volume e latência.
 4. Adicionar orçamentos mensais por categoria.
 5. Implementar recorrências e parcelamentos idempotentes.

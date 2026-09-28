@@ -42,4 +42,16 @@ public interface CategoryJPARepository extends JpaRepository<CategoryEntity, UUI
             @Param("activeStatus") ResourceStatus activeStatus,
             @Param("ignoredId") UUID ignoredId
     );
+
+    @Query("""
+            select count(c) > 0 from CategoryEntity c
+            where c.userId = :userId
+              and c.kind = :kind
+              and lower(c.name) = lower(:name)
+            """)
+    boolean existsName(
+            @Param("userId") UUID userId,
+            @Param("kind") CategoryKind kind,
+            @Param("name") String name
+    );
 }

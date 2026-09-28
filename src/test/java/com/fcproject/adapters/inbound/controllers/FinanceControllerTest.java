@@ -3,6 +3,10 @@ package com.fcproject.adapters.inbound.controllers;
 import com.fcproject.adapters.inbound.security.CurrentUserIdProvider;
 import com.fcproject.application.core.domain.finance.FinanceModels.Account;
 import com.fcproject.application.core.domain.finance.FinanceModels.AccountType;
+import com.fcproject.application.core.domain.finance.FinanceModels.Category;
+import com.fcproject.application.core.domain.finance.FinanceModels.CategoryKind;
+import com.fcproject.application.core.domain.finance.FinanceModels.CategorySource;
+import com.fcproject.application.core.domain.finance.FinanceModels.DefaultCategoryKey;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryStatus;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryType;
 import com.fcproject.application.core.domain.finance.FinanceModels.FinancialEntry;
@@ -62,6 +66,7 @@ class FinanceControllerTest {
         validator.afterPropertiesSet();
         mockMvc = standaloneSetup(
                 new AccountController(finance, finance, finance, finance, finance, finance, currentUser),
+                new CategoryController(finance, finance, finance, finance, currentUser),
                 new TransactionController(finance, finance, finance, finance, finance, currentUser),
                 new TransferController(finance, finance, finance, currentUser)
         ).setControllerAdvice(new GlobalHandler()).setValidator(validator).build();
@@ -137,6 +142,27 @@ class FinanceControllerTest {
                         .content("{\"name\":\"\", \"type\":null, \"currency\":\"REAL\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void serializesCategorySourceAndDefaultKey() throws Exception {
+        when(finance.createCategory(any())).thenReturn(new Category(
+                CATEGORY_ID, USER_ID, "Moradia", CategoryKind.EXPENSE, ResourceStatus.ACTIVE,
+                CategorySource.DEFAULT, DefaultCategoryKey.EXPENSE_HOUSING, 0, NOW, NOW
+        ));
+
+        mockMvc.perform(post("/api/v1/categories")
+                        .principal(PRINCIPAL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Moradia",
+                                  "kind": "EXPENSE"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.source").value("DEFAULT"))
+                .andExpect(jsonPath("$.defaultKey").value("EXPENSE_HOUSING"));
     }
 
     @Test

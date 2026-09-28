@@ -29,7 +29,7 @@ public class UpdateCategoryUsecase implements UpdateCategoryInPort {
         }
         return finance.saveCategory(new Category(
                 current.id(), current.userId(), name, current.kind(), current.status(),
-                current.version(), current.createdAt(), clock.instant()
+                current.source(), current.defaultKey(), current.version(), current.createdAt(), clock.instant()
         ));
     }
 }

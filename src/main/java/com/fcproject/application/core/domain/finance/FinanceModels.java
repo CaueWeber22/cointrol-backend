@@ -17,6 +17,28 @@ public final class FinanceModels {
 
     public enum CategoryKind { INCOME, EXPENSE }
 
+    public enum CategorySource { DEFAULT, CUSTOM }
+
+    public enum DefaultCategoryKey {
+        INCOME_SALARY,
+        INCOME_FREELANCE,
+        INCOME_INVESTMENTS,
+        INCOME_REFUNDS,
+        INCOME_OTHER,
+        EXPENSE_FOOD,
+        EXPENSE_GROCERIES,
+        EXPENSE_HOUSING,
+        EXPENSE_TRANSPORTATION,
+        EXPENSE_HEALTH,
+        EXPENSE_EDUCATION,
+        EXPENSE_LEISURE,
+        EXPENSE_BILLS,
+        EXPENSE_SHOPPING,
+        EXPENSE_SUBSCRIPTIONS,
+        EXPENSE_TAXES,
+        EXPENSE_OTHER
+    }
+
     public enum EntryType { INCOME, EXPENSE, OPENING_BALANCE, TRANSFER_IN, TRANSFER_OUT }
 
     public enum EntryStatus { PENDING, CLEARED, CANCELED }
@@ -42,10 +64,24 @@ public final class FinanceModels {
             String name,
             CategoryKind kind,
             ResourceStatus status,
+            CategorySource source,
+            DefaultCategoryKey defaultKey,
             long version,
             Instant createdAt,
             Instant updatedAt
     ) {
+        public Category(
+                UUID id,
+                UUID userId,
+                String name,
+                CategoryKind kind,
+                ResourceStatus status,
+                long version,
+                Instant createdAt,
+                Instant updatedAt
+        ) {
+            this(id, userId, name, kind, status, CategorySource.CUSTOM, null, version, createdAt, updatedAt);
+        }
     }
 
     public record FinancialEntry(

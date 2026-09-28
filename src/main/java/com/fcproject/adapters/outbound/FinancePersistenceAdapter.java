@@ -235,15 +235,16 @@ public class FinancePersistenceAdapter implements FinanceOutPort {
 
     private CategoryEntity toEntity(Category value) {
         return new CategoryEntity(
-                value.id(), value.userId(), value.name(), value.kind(), value.status(), value.version(),
-                value.createdAt(), value.updatedAt()
+                value.id(), value.userId(), value.name(), value.kind(), value.status(), value.source(),
+                value.defaultKey(), value.version(), value.createdAt(), value.updatedAt()
         );
     }
 
     private Category toDomain(CategoryEntity value) {
         return new Category(
                 value.getId(), value.getUserId(), value.getName(), value.getKind(), value.getStatus(),
-                value.getVersion(), value.getCreatedAt(), value.getUpdatedAt()
+                value.getSource(), value.getDefaultKey(), value.getVersion(), value.getCreatedAt(),
+                value.getUpdatedAt()
         );
     }
 

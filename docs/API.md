@@ -129,6 +129,24 @@ Exemplo de saldo:
 
 `kind` aceita `INCOME` ou `EXPENSE`. Resposta `201 Created` com `Location`.
 
+Resposta de categoria:
+
+```json
+{
+  "id": "30000000-0000-0000-0000-000000000001",
+  "name": "Moradia",
+  "kind": "EXPENSE",
+  "status": "ACTIVE",
+  "source": "DEFAULT",
+  "defaultKey": "EXPENSE_HOUSING",
+  "version": 0,
+  "createdAt": "2026-08-16T12:00:00Z",
+  "updatedAt": "2026-08-16T12:00:00Z"
+}
+```
+
+Categorias padrao sao criadas para cada usuario no cadastro. Categorias personalizadas retornam `source=CUSTOM` e `defaultKey=null`.
+
 | Método | Endpoint | Função |
 |---|---|---|
 | `GET` | `/api/v1/categories?kind=EXPENSE&status=ACTIVE` | Lista com filtros opcionais. |

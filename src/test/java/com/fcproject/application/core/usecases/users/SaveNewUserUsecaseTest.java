@@ -1,6 +1,7 @@
 package com.fcproject.application.core.usecases.users;
 
 import com.fcproject.application.core.commands.CreateUserCommand;
+import com.fcproject.application.core.domain.finance.DefaultCategoryCatalog;
 import com.fcproject.application.core.domain.users.UserDomain;
 import com.fcproject.application.core.enums.Gender;
 import com.fcproject.application.core.exceptions.UserAlreadyExistsException;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -44,7 +46,11 @@ class SaveNewUserUsecaseTest {
         CreateUserCommand command = command("  User@Example.COM ");
         when(users.existsByEmail("user@example.com")).thenReturn(false);
         when(passwordHasher.hash("Valid@123")).thenReturn("bcrypt-hash");
-        when(users.save(any(UserDomain.class), eq("bcrypt-hash"))).thenAnswer(invocation -> {
+        when(users.saveWithDefaultCategories(
+                any(UserDomain.class),
+                eq("bcrypt-hash"),
+                argThat(defaults -> defaults.size() == DefaultCategoryCatalog.all().size())
+        )).thenAnswer(invocation -> {
             UserDomain input = invocation.getArgument(0);
             return new UserDomain(
                     UUID.randomUUID(),
@@ -60,7 +66,11 @@ class SaveNewUserUsecaseTest {
         UserDomain saved = useCase.execute(command);
 
         ArgumentCaptor<UserDomain> userCaptor = ArgumentCaptor.forClass(UserDomain.class);
-        verify(users).save(userCaptor.capture(), eq("bcrypt-hash"));
+        verify(users).saveWithDefaultCategories(
+                userCaptor.capture(),
+                eq("bcrypt-hash"),
+                argThat(defaults -> defaults.size() == DefaultCategoryCatalog.all().size())
+        );
         verify(passwordHasher).hash("Valid@123");
         assertEquals("user@example.com", userCaptor.getValue().getEmail());
         assertEquals("user@example.com", saved.getEmail());
@@ -74,6 +84,7 @@ class SaveNewUserUsecaseTest {
 
         verify(passwordHasher, never()).hash(any());
         verify(users, never()).save(any(), any());
+        verify(users, never()).saveWithDefaultCategories(any(), any(), any());
     }
 
     private CreateUserCommand command(String email) {

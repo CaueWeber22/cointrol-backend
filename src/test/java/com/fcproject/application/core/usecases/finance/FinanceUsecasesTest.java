@@ -13,7 +13,9 @@ import com.fcproject.application.core.domain.finance.FinanceModels.Account;
 import com.fcproject.application.core.domain.finance.FinanceModels.AccountBalance;
 import com.fcproject.application.core.domain.finance.FinanceModels.Category;
 import com.fcproject.application.core.domain.finance.FinanceModels.CategoryKind;
+import com.fcproject.application.core.domain.finance.FinanceModels.CategorySource;
 import com.fcproject.application.core.domain.finance.FinanceModels.CategorySummary;
+import com.fcproject.application.core.domain.finance.FinanceModels.DefaultCategoryKey;
 import com.fcproject.application.core.domain.finance.FinanceModels.CurrencySummary;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryStatus;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryType;
@@ -198,6 +200,29 @@ class FinanceUsecasesTest {
         service.archiveCategory(USER_ID, category.id());
 
         verify(finance, org.mockito.Mockito.times(3)).saveCategory(any());
+    }
+
+    @Test
+    void preservesDefaultCategoryMetadataWhenUpdatingAndArchiving() {
+        Category category = new Category(
+                CATEGORY_ID, USER_ID, "Moradia", CategoryKind.EXPENSE, ResourceStatus.ACTIVE,
+                CategorySource.DEFAULT, DefaultCategoryKey.EXPENSE_HOUSING, 0, NOW, NOW
+        );
+        when(finance.findCategory(USER_ID, CATEGORY_ID)).thenReturn(Optional.of(category));
+        when(finance.existsActiveCategoryName(USER_ID, CategoryKind.EXPENSE, "Casa", CATEGORY_ID))
+                .thenReturn(false);
+        when(finance.saveCategory(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Category updated = service.updateCategory(new UpdateCategory(USER_ID, CATEGORY_ID, "Casa"));
+        service.archiveCategory(USER_ID, CATEGORY_ID);
+
+        assertEquals(CategorySource.DEFAULT, updated.source());
+        assertEquals(DefaultCategoryKey.EXPENSE_HOUSING, updated.defaultKey());
+        verify(finance).saveCategory(argThat(saved ->
+                saved.status() == ResourceStatus.ARCHIVED
+                        && saved.source() == CategorySource.DEFAULT
+                        && saved.defaultKey() == DefaultCategoryKey.EXPENSE_HOUSING
+        ));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.fcproject.application.core.usecases.users;
 
 import com.fcproject.application.core.commands.CreateUserCommand;
+import com.fcproject.application.core.domain.finance.DefaultCategoryCatalog;
 import com.fcproject.application.core.domain.users.UserDomain;
 import com.fcproject.application.core.exceptions.RequiredFieldException;
 import com.fcproject.application.core.exceptions.UserAlreadyExistsException;
@@ -41,7 +42,11 @@ public class SaveNewUserUsecase implements SaveNewUserInPort {
                 command.dateOfBirth()
         );
 
-        return repositoryOut.save(user, passwordHasher.hash(command.password()));
+        return repositoryOut.saveWithDefaultCategories(
+                user,
+                passwordHasher.hash(command.password()),
+                DefaultCategoryCatalog.all()
+        );
     }
 
     private void userValidation(CreateUserCommand command, String normalizedEmail) {

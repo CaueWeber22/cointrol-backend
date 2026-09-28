@@ -27,7 +27,7 @@ public class ArchiveCategoryUsecase implements ArchiveCategoryInPort {
         }
         finance.saveCategory(new Category(
                 current.id(), current.userId(), current.name(), current.kind(), ResourceStatus.ARCHIVED,
-                current.version(), current.createdAt(), clock.instant()
+                current.source(), current.defaultKey(), current.version(), current.createdAt(), clock.instant()
         ));
     }
 }

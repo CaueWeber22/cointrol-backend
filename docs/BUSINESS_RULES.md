@@ -50,8 +50,11 @@ O sistema deve proteger três invariantes centrais:
 ## Categorias
 
 - Uma categoria pertence a exatamente um usuário.
-- Categoria possui nome, tipo, status, versão e timestamps.
+- Categoria possui nome, tipo, status, origem, chave padrão opcional, versão e timestamps.
 - Tipos suportados: `INCOME` e `EXPENSE`.
+- Categorias padrão são materializadas por usuário no cadastro e identificadas por `source=DEFAULT` e `defaultKey`.
+- Categorias criadas manualmente usam `source=CUSTOM` e não possuem `defaultKey`.
+- Ao criar categorias padrão para um usuário, não deve haver duplicação quando já existir categoria com o mesmo nome e tipo.
 - Nome é obrigatório, normalizado por espaços e limitado a 100 caracteres.
 - Categoria nasce `ACTIVE`.
 - Categoria arquivada permanece no histórico, mas não pode ser usada em novos lançamentos.
