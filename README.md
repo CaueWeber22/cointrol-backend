@@ -24,6 +24,16 @@ $env:SPRING_PROFILES_ACTIVE='local'
 
 O perfil `local` usa o PostgreSQL do `compose.yml`, executa as migrations Flyway e habilita o Swagger em `http://localhost:8080/swagger-ui.html`.
 
+## Executar com frontend
+
+A partir do diretorio pai que contem `cointrol` e `front-end-control`:
+
+```powershell
+docker compose up --build
+```
+
+O Compose raiz sobe PostgreSQL, backend e frontend. A aplicacao fica em `http://localhost:4200`, com `/api` e `/actuator` encaminhados para o backend.
+
 ## Validar
 
 ```powershell

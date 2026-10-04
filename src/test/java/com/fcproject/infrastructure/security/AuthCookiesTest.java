@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AuthCookiesTest {
     @Test void maxAgeUsesActualExpiryAndNeverExtendsTokensAfterProcessingDelay() {
         Instant issued = Instant.parse("2026-09-27T12:00:00Z");
-        var cookies = new AuthCookies(Clock.fixed(issued.plusSeconds(12), ZoneOffset.UTC));
+        var cookies = new AuthCookies(Clock.fixed(issued.plusSeconds(12), ZoneOffset.UTC), true, "None");
         var headers = cookies.issue(new IssuedTokens("access", "refresh", 300, "Bearer",
                 issued, issued.plus(Duration.ofDays(7))));
         assertThat(headers.get("Set-Cookie")).hasSize(2);
