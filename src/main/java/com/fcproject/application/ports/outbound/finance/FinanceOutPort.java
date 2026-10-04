@@ -22,7 +22,11 @@ public interface FinanceOutPort {
 
     Optional<Account> findAccount(UUID userId, UUID accountId);
 
+    Optional<Account> findDefaultAccount(UUID userId);
+
     List<Account> findAccounts(UUID userId, ResourceStatus status);
+
+    boolean existsAccount(UUID userId);
 
     boolean existsActiveAccountName(UUID userId, String normalizedName, UUID ignoredId);
 

@@ -4,6 +4,7 @@ public interface FinanceInPort extends
         CreateAccountInPort,
         ListAccountsInPort,
         GetAccountInPort,
+        GetDefaultAccountInPort,
         UpdateAccountInPort,
         ArchiveAccountInPort,
         GetAccountBalanceInPort,

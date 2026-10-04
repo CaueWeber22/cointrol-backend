@@ -12,6 +12,7 @@ import com.fcproject.application.core.domain.finance.FinanceModels.ResourceStatu
 import com.fcproject.application.ports.inbound.finance.ArchiveAccountInPort;
 import com.fcproject.application.ports.inbound.finance.CreateAccountInPort;
 import com.fcproject.application.ports.inbound.finance.GetAccountBalanceInPort;
+import com.fcproject.application.ports.inbound.finance.GetDefaultAccountInPort;
 import com.fcproject.application.ports.inbound.finance.GetAccountInPort;
 import com.fcproject.application.ports.inbound.finance.ListAccountsInPort;
 import com.fcproject.application.ports.inbound.finance.UpdateAccountInPort;
@@ -38,6 +39,7 @@ public class AccountController {
     private final CreateAccountInPort createAccount;
     private final ListAccountsInPort listAccounts;
     private final GetAccountInPort getAccount;
+    private final GetDefaultAccountInPort getDefaultAccount;
     private final UpdateAccountInPort updateAccount;
     private final ArchiveAccountInPort archiveAccount;
     private final GetAccountBalanceInPort getAccountBalance;
@@ -47,6 +49,7 @@ public class AccountController {
             CreateAccountInPort createAccount,
             ListAccountsInPort listAccounts,
             GetAccountInPort getAccount,
+            GetDefaultAccountInPort getDefaultAccount,
             UpdateAccountInPort updateAccount,
             ArchiveAccountInPort archiveAccount,
             GetAccountBalanceInPort getAccountBalance,
@@ -55,6 +58,7 @@ public class AccountController {
         this.createAccount = createAccount;
         this.listAccounts = listAccounts;
         this.getAccount = getAccount;
+        this.getDefaultAccount = getDefaultAccount;
         this.updateAccount = updateAccount;
         this.archiveAccount = archiveAccount;
         this.getAccountBalance = getAccountBalance;
@@ -80,6 +84,11 @@ public class AccountController {
     ) {
         return listAccounts.listAccounts(new AccountFilter(currentUser.get(principal), status))
                 .stream().map(AccountResponse::from).toList();
+    }
+
+    @GetMapping("/default")
+    public AccountResponse getDefault(Principal principal) {
+        return AccountResponse.from(getDefaultAccount.getDefaultAccount(currentUser.get(principal)));
     }
 
     @GetMapping("/{id}")

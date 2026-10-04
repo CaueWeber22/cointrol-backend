@@ -29,7 +29,7 @@ public class UpdateAccountUsecase implements UpdateAccountInPort {
         }
         return finance.saveAccount(new Account(
                 current.id(), current.userId(), name, current.type(), current.currency(),
-                current.status(), current.version(), current.createdAt(), clock.instant()
+                current.status(), current.defaultAccount(), current.version(), current.createdAt(), clock.instant()
         ));
     }
 }

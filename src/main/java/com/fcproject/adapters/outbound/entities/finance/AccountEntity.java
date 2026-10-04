@@ -36,6 +36,9 @@ public class AccountEntity {
     @Column(nullable = false, length = 10)
     private ResourceStatus status;
 
+    @Column(name = "is_default", nullable = false)
+    private boolean defaultAccount;
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -51,7 +54,7 @@ public class AccountEntity {
 
     public AccountEntity(
             UUID id, UUID userId, String name, AccountType type, String currency,
-            ResourceStatus status, long version, Instant createdAt, Instant updatedAt
+            ResourceStatus status, boolean defaultAccount, long version, Instant createdAt, Instant updatedAt
     ) {
         this.id = id;
         this.userId = userId;
@@ -59,6 +62,7 @@ public class AccountEntity {
         this.type = type;
         this.currency = currency;
         this.status = status;
+        this.defaultAccount = defaultAccount;
         this.version = version;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -70,6 +74,7 @@ public class AccountEntity {
     public AccountType getType() { return type; }
     public String getCurrency() { return currency; }
     public ResourceStatus getStatus() { return status; }
+    public boolean isDefaultAccount() { return defaultAccount; }
     public long getVersion() { return version; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

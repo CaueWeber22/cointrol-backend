@@ -73,8 +73,18 @@ public class FinancePersistenceAdapter implements FinanceOutPort {
     }
 
     @Override
+    public Optional<Account> findDefaultAccount(UUID userId) {
+        return accounts.findByUserIdAndDefaultAccountTrue(userId).map(this::toDomain);
+    }
+
+    @Override
     public List<Account> findAccounts(UUID userId, ResourceStatus status) {
         return accounts.findOwned(userId, status).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public boolean existsAccount(UUID userId) {
+        return accounts.existsByUserId(userId);
     }
 
     @Override
@@ -222,14 +232,15 @@ public class FinancePersistenceAdapter implements FinanceOutPort {
     private AccountEntity toEntity(Account value) {
         return new AccountEntity(
                 value.id(), value.userId(), value.name(), value.type(), value.currency(), value.status(),
-                value.version(), value.createdAt(), value.updatedAt()
+                value.defaultAccount(), value.version(), value.createdAt(), value.updatedAt()
         );
     }
 
     private Account toDomain(AccountEntity value) {
         return new Account(
                 value.getId(), value.getUserId(), value.getName(), value.getType(), value.getCurrency(),
-                value.getStatus(), value.getVersion(), value.getCreatedAt(), value.getUpdatedAt()
+                value.getStatus(), value.isDefaultAccount(), value.getVersion(), value.getCreatedAt(),
+                value.getUpdatedAt()
         );
     }
 

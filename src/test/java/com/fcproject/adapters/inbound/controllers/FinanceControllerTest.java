@@ -65,7 +65,7 @@ class FinanceControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         mockMvc = standaloneSetup(
-                new AccountController(finance, finance, finance, finance, finance, finance, currentUser),
+                new AccountController(finance, finance, finance, finance, finance, finance, finance, currentUser),
                 new CategoryController(finance, finance, finance, finance, currentUser),
                 new TransactionController(finance, finance, finance, finance, finance, currentUser),
                 new TransferController(finance, finance, finance, currentUser)
@@ -77,7 +77,7 @@ class FinanceControllerTest {
     void createsAccountWithoutAcceptingOwnerFromPayload() throws Exception {
         when(finance.createAccount(any())).thenReturn(new Account(
                 ACCOUNT_ID, USER_ID, "Conta principal", AccountType.CHECKING, "BRL",
-                ResourceStatus.ACTIVE, 0, NOW, NOW
+                ResourceStatus.ACTIVE, true, 0, NOW, NOW
         ));
 
         mockMvc.perform(post("/api/v1/accounts")
@@ -95,6 +95,7 @@ class FinanceControllerTest {
                 .andExpect(header().string("Location", "/api/v1/accounts/" + ACCOUNT_ID))
                 .andExpect(jsonPath("$.id").value(ACCOUNT_ID.toString()))
                 .andExpect(jsonPath("$.currency").value("BRL"))
+                .andExpect(jsonPath("$.defaultAccount").value(true))
                 .andExpect(jsonPath("$.userId").doesNotExist());
     }
 
@@ -102,7 +103,7 @@ class FinanceControllerTest {
     void acceptsZeroOpeningBalanceForAccountCreation() throws Exception {
         when(finance.createAccount(any())).thenReturn(new Account(
                 ACCOUNT_ID, USER_ID, "Conta principal", AccountType.CHECKING, "BRL",
-                ResourceStatus.ACTIVE, 0, NOW, NOW
+                ResourceStatus.ACTIVE, true, 0, NOW, NOW
         ));
 
         mockMvc.perform(post("/api/v1/accounts")
@@ -117,6 +118,19 @@ class FinanceControllerTest {
                                 }
                                 """))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void getsDefaultAccount() throws Exception {
+        when(finance.getDefaultAccount(USER_ID)).thenReturn(new Account(
+                ACCOUNT_ID, USER_ID, "Conta principal", AccountType.CHECKING, "BRL",
+                ResourceStatus.ACTIVE, true, 0, NOW, NOW
+        ));
+
+        mockMvc.perform(get("/api/v1/accounts/default").principal(PRINCIPAL))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(ACCOUNT_ID.toString()))
+                .andExpect(jsonPath("$.defaultAccount").value(true));
     }
 
     @Test

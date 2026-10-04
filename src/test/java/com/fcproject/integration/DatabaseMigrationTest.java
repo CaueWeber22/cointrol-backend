@@ -27,7 +27,7 @@ class DatabaseMigrationTest {
                 .createSchemas(true)
                 .load();
 
-        assertEquals(12, flyway.migrate().migrationsExecuted);
+        assertEquals(13, flyway.migrate().migrationsExecuted);
 
         try (var connection = DriverManager.getConnection(
                 POSTGRES.getJdbcUrl(),
@@ -79,6 +79,18 @@ class DatabaseMigrationTest {
                     """)) {
                 currencyColumn.next();
                 assertEquals(1, currencyColumn.getInt(1));
+            }
+            try (var defaultAccountColumn = statement.executeQuery("""
+                    select count(*)
+                    from information_schema.columns
+                    where table_schema = 'finance'
+                      and table_name = 'accounts'
+                      and column_name = 'is_default'
+                      and data_type = 'boolean'
+                      and is_nullable = 'NO'
+                    """)) {
+                defaultAccountColumn.next();
+                assertEquals(1, defaultAccountColumn.getInt(1));
             }
             try (var categoryMetadataColumns = statement.executeQuery("""
                     select count(*)

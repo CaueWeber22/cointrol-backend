@@ -47,9 +47,10 @@ public class CreateAccountUsecase implements CreateAccountInPort {
             throw conflict("ACCOUNT_NAME_CONFLICT", "An active account with this name already exists");
         }
         Instant now = clock.instant();
+        boolean defaultAccount = !finance.existsAccount(command.userId());
         Account account = new Account(
                 UUID.randomUUID(), command.userId(), name, command.type(), currency,
-                ResourceStatus.ACTIVE, 0, now, now
+                ResourceStatus.ACTIVE, defaultAccount, 0, now, now
         );
         if (command.openingBalance() == null) {
             return finance.saveAccount(account);

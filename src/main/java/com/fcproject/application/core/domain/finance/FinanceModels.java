@@ -52,6 +52,7 @@ public final class FinanceModels {
             AccountType type,
             String currency,
             ResourceStatus status,
+            boolean defaultAccount,
             long version,
             Instant createdAt,
             Instant updatedAt

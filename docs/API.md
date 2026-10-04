@@ -92,11 +92,15 @@ Tipos aceitos na criação: `CHECKING`, `SAVINGS` e `INVESTMENT`.
 
 Resposta `201 Created`, com `Location: /api/v1/accounts/{id}`.
 
+A resposta de conta inclui `defaultAccount`. Na primeira conta criada pelo usuário, esse campo vem `true`; nas demais, `false`.
+`GET /api/v1/accounts/default` retorna `404` quando o usuário ainda não possui conta padrão.
+
 ### Consultar e manter contas
 
 | Método | Endpoint | Função |
 |---|---|---|
 | `GET` | `/api/v1/accounts?status=ACTIVE` | Lista contas, opcionalmente por `ACTIVE` ou `ARCHIVED`. |
+| `GET` | `/api/v1/accounts/default` | Retorna a conta padrão do usuário. |
 | `GET` | `/api/v1/accounts/{id}` | Retorna uma conta do usuário. |
 | `PATCH` | `/api/v1/accounts/{id}` | Renomeia usando `{"name":"Novo nome"}`. |
 | `DELETE` | `/api/v1/accounts/{id}` | Arquiva de forma idempotente e retorna `204`. |

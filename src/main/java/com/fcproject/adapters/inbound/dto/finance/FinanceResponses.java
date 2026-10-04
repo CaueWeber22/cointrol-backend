@@ -26,6 +26,7 @@ public final class FinanceResponses {
             String type,
             String currency,
             String status,
+            boolean defaultAccount,
             long version,
             Instant createdAt,
             Instant updatedAt
@@ -33,7 +34,7 @@ public final class FinanceResponses {
         public static AccountResponse from(Account value) {
             return new AccountResponse(
                     value.id(), value.name(), value.type().name(), value.currency(), value.status().name(),
-                    value.version(), value.createdAt(), value.updatedAt()
+                    value.defaultAccount(), value.version(), value.createdAt(), value.updatedAt()
             );
         }
     }

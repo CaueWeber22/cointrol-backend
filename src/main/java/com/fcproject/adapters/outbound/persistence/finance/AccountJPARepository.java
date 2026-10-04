@@ -13,6 +13,10 @@ import java.util.UUID;
 public interface AccountJPARepository extends JpaRepository<AccountEntity, UUID> {
     Optional<AccountEntity> findByIdAndUserId(UUID id, UUID userId);
 
+    Optional<AccountEntity> findByUserIdAndDefaultAccountTrue(UUID userId);
+
+    boolean existsByUserId(UUID userId);
+
     @Query("""
             select a from AccountEntity a
             where a.userId = :userId and (:status is null or a.status = :status)

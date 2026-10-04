@@ -32,6 +32,7 @@ import com.fcproject.application.core.exceptions.ResourceNotFoundException;
 import com.fcproject.application.core.usecases.finance.accounts.ArchiveAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.CreateAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.GetAccountBalanceUsecase;
+import com.fcproject.application.core.usecases.finance.accounts.GetDefaultAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.GetAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.ListAccountsUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.UpdateAccountUsecase;
@@ -71,6 +72,7 @@ import static com.fcproject.application.core.domain.finance.FinanceModels.Accoun
 import static com.fcproject.application.core.domain.finance.FinanceModels.AccountType.CASH;
 import static com.fcproject.application.core.domain.finance.FinanceModels.AccountType.SAVINGS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -102,6 +104,7 @@ class FinanceUsecasesTest {
     @Test
     void createsNormalizedAccount() {
         when(finance.existsActiveAccountName(USER_ID, "Conta Principal", null)).thenReturn(false);
+        when(finance.existsAccount(USER_ID)).thenReturn(false);
         when(finance.saveAccount(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Account created = service.createAccount(new CreateAccount(
@@ -112,11 +115,28 @@ class FinanceUsecasesTest {
         assertEquals("BRL", created.currency());
         assertEquals(ResourceStatus.ACTIVE, created.status());
         assertEquals(USER_ID, created.userId());
+        assertTrue(created.defaultAccount());
+    }
+
+    @Test
+    void createsOnlyFirstAccountAsDefault() {
+        when(finance.existsActiveAccountName(USER_ID, "Reserva", null)).thenReturn(false);
+        when(finance.existsAccount(USER_ID)).thenReturn(true);
+        when(finance.saveAccount(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Account created = service.createAccount(new CreateAccount(
+                USER_ID, "Reserva", SAVINGS, "BRL", null
+        ));
+
+        assertEquals("Reserva", created.name());
+        assertEquals(ResourceStatus.ACTIVE, created.status());
+        assertFalse(created.defaultAccount());
     }
 
     @Test
     void persistsOpeningBalanceAsAnAtomicLedgerEntry() {
         when(finance.existsActiveAccountName(USER_ID, "Carteira", null)).thenReturn(false);
+        when(finance.existsAccount(USER_ID)).thenReturn(false);
         when(finance.saveAccountWithOpeningBalance(any(), any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -131,11 +151,13 @@ class FinanceUsecasesTest {
                         && entry.amount().equals(new BigDecimal("250.0000"))
                         && entry.accountId().equals(created.id())
         ));
+        assertTrue(created.defaultAccount());
     }
 
     @Test
     void acceptsZeroOpeningBalance() {
         when(finance.existsActiveAccountName(USER_ID, "Conta Zero", null)).thenReturn(false);
+        when(finance.existsAccount(USER_ID)).thenReturn(false);
         when(finance.saveAccountWithOpeningBalance(any(), any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -184,6 +206,21 @@ class FinanceUsecasesTest {
         verify(finance, org.mockito.Mockito.times(2)).findAccount(USER_ID, ACCOUNT_ID);
         verify(finance, org.mockito.Mockito.times(2)).saveAccount(any());
         assertThrows(ResourceNotFoundException.class, () -> service.getAccount(USER_ID, SECOND_ACCOUNT_ID));
+    }
+
+    @Test
+    void getsDefaultAccount() {
+        Account account = account(ACCOUNT_ID, "Principal", "BRL", ResourceStatus.ACTIVE);
+        when(finance.findDefaultAccount(USER_ID)).thenReturn(Optional.of(account));
+
+        assertEquals(account, service.getDefaultAccount(USER_ID));
+    }
+
+    @Test
+    void rejectsMissingDefaultAccountAsNotFound() {
+        when(finance.findDefaultAccount(USER_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.getDefaultAccount(USER_ID));
     }
 
     @Test
@@ -456,7 +493,7 @@ class FinanceUsecasesTest {
 
     private Account account(UUID id, String name, String currency, ResourceStatus status) {
         return new Account(id, USER_ID, name, id.equals(SECOND_ACCOUNT_ID) ? SAVINGS : CHECKING,
-                currency, status, 0, NOW, NOW);
+                currency, status, id.equals(ACCOUNT_ID), 0, NOW, NOW);
     }
 
     private Category category(UUID id, String name, CategoryKind kind, ResourceStatus status) {
@@ -511,6 +548,7 @@ class FinanceUsecasesTest {
         private final CreateAccountUsecase createAccount;
         private final ListAccountsUsecase listAccounts;
         private final GetAccountUsecase getAccount;
+        private final GetDefaultAccountUsecase getDefaultAccount;
         private final UpdateAccountUsecase updateAccount;
         private final ArchiveAccountUsecase archiveAccount;
         private final GetAccountBalanceUsecase getAccountBalance;
@@ -534,6 +572,7 @@ class FinanceUsecasesTest {
             this.createAccount = new CreateAccountUsecase(finance, clock);
             this.listAccounts = new ListAccountsUsecase(finance);
             this.getAccount = new GetAccountUsecase(finance);
+            this.getDefaultAccount = new GetDefaultAccountUsecase(finance);
             this.updateAccount = new UpdateAccountUsecase(finance, clock);
             this.archiveAccount = new ArchiveAccountUsecase(finance, clock);
             this.getAccountBalance = new GetAccountBalanceUsecase(finance);
@@ -567,6 +606,11 @@ class FinanceUsecasesTest {
         @Override
         public Account getAccount(UUID userId, UUID accountId) {
             return getAccount.getAccount(userId, accountId);
+        }
+
+        @Override
+        public Account getDefaultAccount(UUID userId) {
+            return getDefaultAccount.getDefaultAccount(userId);
         }
 
         @Override

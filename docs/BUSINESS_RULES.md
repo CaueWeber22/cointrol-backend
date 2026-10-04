@@ -42,6 +42,8 @@ O sistema deve proteger três invariantes centrais:
 - Nome é obrigatório, normalizado por espaços e limitado a 100 caracteres.
 - Nomes ativos devem ser únicos por usuário.
 - Conta nasce `ACTIVE`.
+- A primeira conta criada por um usuário nasce marcada como conta padrão (`defaultAccount=true`).
+- Cada usuário pode ter no máximo uma conta padrão.
 - Conta arquivada não recebe novos lançamentos nem transferências.
 - Arquivar conta é idempotente.
 - Saldo inicial, quando informado, pode ser zero ou positivo, vira lançamento `OPENING_BALANCE` confirmado e persistido junto com a conta.

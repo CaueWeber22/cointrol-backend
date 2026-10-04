@@ -22,6 +22,7 @@ O schema `access` contém identidade e sessões. O schema `finance` contém cont
 | V10 | `src/main/resources/db/migration/V10__align_account_currency_type.sql` | Alinha `accounts.currency` de `CHAR(3)` para `VARCHAR(3)`, conforme o mapeamento JPA. |
 | V11 | `src/main/resources/db/migration/V11__add_security_controls.sql` | Cria proteção persistente de login e auditoria de eventos de segurança. |
 | V12 | `src/main/resources/db/migration/V12__add_default_category_metadata.sql` | Adiciona origem/chave canônica às categorias e cria categorias padrão por usuário sem duplicar nome/tipo ativo. |
+| V13 | `src/main/resources/db/migration/V13__add_default_account.sql` | Adiciona marcação de conta padrão e backfill da primeira conta de cada usuário. |
 
 O Flyway mantém `access.flyway_schema_history` e aplica cada versão uma única vez.
 
@@ -87,6 +88,7 @@ erDiagram
         varchar type
         varchar currency
         varchar status
+        boolean is_default
         bigint version
     }
     CATEGORIES {
@@ -131,6 +133,7 @@ erDiagram
 - Não existe coluna materializada de saldo.
 - FKs compostas por recurso e `user_id` impedem vínculos entre proprietários diferentes.
 - Índices parciais garantem nomes ativos únicos e idempotency keys únicas.
+- Índice parcial garante no máximo uma conta padrão por usuário.
 - Categorias padrão são linhas por usuário com `source = DEFAULT` e `default_key`; o índice parcial evita repetir a mesma chave padrão para o mesmo usuário.
 - Lançamentos cancelados exigem `canceled_at`; os demais proíbem esse campo.
 - `TRANSFER_IN` e `TRANSFER_OUT` exigem `transfer_group_id`.
@@ -195,7 +198,7 @@ Essa migration não foi automatizada porque o repositório não informa se exist
 
 ## Teste automatizado
 
-`DatabaseMigrationTest` cria um PostgreSQL 17 vazio, aplica as doze migrations e valida tabelas, papéis, FKs, controles de segurança, colunas de cancelamento, metadados de categoria e o tipo de `accounts.currency` nos schemas `access` e `finance`.
+`DatabaseMigrationTest` cria um PostgreSQL 17 vazio, aplica as treze migrations e valida tabelas, papéis, FKs, controles de segurança, colunas de cancelamento, metadados de categoria, conta padrão e o tipo de `accounts.currency` nos schemas `access` e `finance`.
 
 ```powershell
 docker info

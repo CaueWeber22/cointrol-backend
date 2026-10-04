@@ -27,7 +27,7 @@ public class ArchiveAccountUsecase implements ArchiveAccountInPort {
         }
         finance.saveAccount(new Account(
                 current.id(), current.userId(), current.name(), current.type(), current.currency(),
-                ResourceStatus.ARCHIVED, current.version(), current.createdAt(), clock.instant()
+                ResourceStatus.ARCHIVED, current.defaultAccount(), current.version(), current.createdAt(), clock.instant()
         ));
     }
 }

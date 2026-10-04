@@ -20,6 +20,7 @@ import com.fcproject.application.core.services.AuthService;
 import com.fcproject.application.core.usecases.finance.accounts.ArchiveAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.CreateAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.GetAccountBalanceUsecase;
+import com.fcproject.application.core.usecases.finance.accounts.GetDefaultAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.GetAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.ListAccountsUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.UpdateAccountUsecase;
@@ -51,6 +52,7 @@ import com.fcproject.application.ports.inbound.finance.CreateCategoryInPort;
 import com.fcproject.application.ports.inbound.finance.CreateEntryInPort;
 import com.fcproject.application.ports.inbound.finance.CreateTransferInPort;
 import com.fcproject.application.ports.inbound.finance.GetAccountBalanceInPort;
+import com.fcproject.application.ports.inbound.finance.GetDefaultAccountInPort;
 import com.fcproject.application.ports.inbound.finance.GetAccountInPort;
 import com.fcproject.application.ports.inbound.finance.GetEntryInPort;
 import com.fcproject.application.ports.inbound.finance.GetTransferInPort;
@@ -259,6 +261,11 @@ public class ApplicationConfig {
     @Bean
     GetAccountInPort getAccountInPort(FinanceOutPort finance) {
         return new GetAccountUsecase(finance);
+    }
+
+    @Bean
+    GetDefaultAccountInPort getDefaultAccountInPort(FinanceOutPort finance) {
+        return new GetDefaultAccountUsecase(finance);
     }
 
     @Bean
