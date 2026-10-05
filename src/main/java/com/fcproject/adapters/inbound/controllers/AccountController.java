@@ -15,6 +15,7 @@ import com.fcproject.application.ports.inbound.finance.GetAccountBalanceInPort;
 import com.fcproject.application.ports.inbound.finance.GetDefaultAccountInPort;
 import com.fcproject.application.ports.inbound.finance.GetAccountInPort;
 import com.fcproject.application.ports.inbound.finance.ListAccountsInPort;
+import com.fcproject.application.ports.inbound.finance.SetDefaultAccountInPort;
 import com.fcproject.application.ports.inbound.finance.UpdateAccountInPort;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -40,6 +42,7 @@ public class AccountController {
     private final ListAccountsInPort listAccounts;
     private final GetAccountInPort getAccount;
     private final GetDefaultAccountInPort getDefaultAccount;
+    private final SetDefaultAccountInPort setDefaultAccount;
     private final UpdateAccountInPort updateAccount;
     private final ArchiveAccountInPort archiveAccount;
     private final GetAccountBalanceInPort getAccountBalance;
@@ -50,6 +53,7 @@ public class AccountController {
             ListAccountsInPort listAccounts,
             GetAccountInPort getAccount,
             GetDefaultAccountInPort getDefaultAccount,
+            SetDefaultAccountInPort setDefaultAccount,
             UpdateAccountInPort updateAccount,
             ArchiveAccountInPort archiveAccount,
             GetAccountBalanceInPort getAccountBalance,
@@ -59,6 +63,7 @@ public class AccountController {
         this.listAccounts = listAccounts;
         this.getAccount = getAccount;
         this.getDefaultAccount = getDefaultAccount;
+        this.setDefaultAccount = setDefaultAccount;
         this.updateAccount = updateAccount;
         this.archiveAccount = archiveAccount;
         this.getAccountBalance = getAccountBalance;
@@ -89,6 +94,11 @@ public class AccountController {
     @GetMapping("/default")
     public AccountResponse getDefault(Principal principal) {
         return AccountResponse.from(getDefaultAccount.getDefaultAccount(currentUser.get(principal)));
+    }
+
+    @PutMapping("/{id}/default")
+    public AccountResponse setDefault(Principal principal, @PathVariable UUID id) {
+        return AccountResponse.from(setDefaultAccount.setDefaultAccount(currentUser.get(principal), id));
     }
 
     @GetMapping("/{id}")

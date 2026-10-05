@@ -7,6 +7,7 @@ import com.fcproject.adapters.outbound.persistence.finance.AccountJPARepository;
 import com.fcproject.adapters.outbound.persistence.finance.CategoryJPARepository;
 import com.fcproject.adapters.outbound.persistence.finance.FinancialEntryJPARepository;
 import com.fcproject.adapters.outbound.persistence.finance.TransferGroupJPARepository;
+import com.fcproject.application.core.domain.finance.FinanceModels.Account;
 import com.fcproject.application.core.domain.finance.FinanceModels.AccountType;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryStatus;
 import com.fcproject.application.core.domain.finance.FinanceModels.EntryType;
@@ -84,6 +85,31 @@ class FinancePersistenceAdapterTest {
 
         assertEquals(SOURCE_ID, result.orElseThrow().id());
         assertEquals(true, result.orElseThrow().defaultAccount());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void savesDefaultAccountAndClearsPreviousDefaultInsideOneTransaction() {
+        Account target = new Account(
+                DESTINATION_ID, USER_ID, "Reserva", AccountType.SAVINGS, "BRL",
+                ResourceStatus.ACTIVE, true, 0, NOW, NOW.plusSeconds(30)
+        );
+        when(transactions.execute(any(TransactionCallback.class))).thenAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(mock(TransactionStatus.class));
+        });
+        when(accounts.findByUserIdAndDefaultAccountTrue(USER_ID)).thenReturn(Optional.of(new AccountEntity(
+                SOURCE_ID, USER_ID, "Principal", AccountType.CHECKING, "BRL",
+                ResourceStatus.ACTIVE, true, 0, NOW, NOW
+        )));
+        when(accounts.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Account result = adapter.saveDefaultAccount(target);
+
+        assertEquals(DESTINATION_ID, result.id());
+        assertEquals(true, result.defaultAccount());
+        verify(accounts, org.mockito.Mockito.times(2)).save(any());
+        verify(accounts).flush();
     }
 
     @Test

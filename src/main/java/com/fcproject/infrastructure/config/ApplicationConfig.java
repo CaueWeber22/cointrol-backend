@@ -23,6 +23,7 @@ import com.fcproject.application.core.usecases.finance.accounts.GetAccountBalanc
 import com.fcproject.application.core.usecases.finance.accounts.GetDefaultAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.GetAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.ListAccountsUsecase;
+import com.fcproject.application.core.usecases.finance.accounts.SetDefaultAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.UpdateAccountUsecase;
 import com.fcproject.application.core.usecases.finance.categories.ArchiveCategoryUsecase;
 import com.fcproject.application.core.usecases.finance.categories.CreateCategoryUsecase;
@@ -59,6 +60,7 @@ import com.fcproject.application.ports.inbound.finance.GetTransferInPort;
 import com.fcproject.application.ports.inbound.finance.ListAccountsInPort;
 import com.fcproject.application.ports.inbound.finance.ListCategoriesInPort;
 import com.fcproject.application.ports.inbound.finance.ListEntriesInPort;
+import com.fcproject.application.ports.inbound.finance.SetDefaultAccountInPort;
 import com.fcproject.application.ports.inbound.finance.SummarizeByCategoryInPort;
 import com.fcproject.application.ports.inbound.finance.SummarizeInPort;
 import com.fcproject.application.ports.inbound.finance.SummarizeTimelineInPort;
@@ -266,6 +268,11 @@ public class ApplicationConfig {
     @Bean
     GetDefaultAccountInPort getDefaultAccountInPort(FinanceOutPort finance) {
         return new GetDefaultAccountUsecase(finance);
+    }
+
+    @Bean
+    SetDefaultAccountInPort setDefaultAccountInPort(FinanceOutPort finance, Clock clock) {
+        return new SetDefaultAccountUsecase(finance, clock);
     }
 
     @Bean

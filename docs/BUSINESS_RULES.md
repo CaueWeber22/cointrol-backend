@@ -44,6 +44,7 @@ O sistema deve proteger três invariantes centrais:
 - Conta nasce `ACTIVE`.
 - A primeira conta criada por um usuário nasce marcada como conta padrão (`defaultAccount=true`).
 - Cada usuário pode ter no máximo uma conta padrão.
+- Usuário pode alternar sua conta padrão para outra conta ativa própria.
 - Conta arquivada não recebe novos lançamentos nem transferências.
 - Arquivar conta é idempotente.
 - Saldo inicial, quando informado, pode ser zero ou positivo, vira lançamento `OPENING_BALANCE` confirmado e persistido junto com a conta.

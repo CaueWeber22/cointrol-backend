@@ -102,6 +102,7 @@ A resposta de conta inclui `defaultAccount`. Na primeira conta criada pelo usuá
 | `GET` | `/api/v1/accounts?status=ACTIVE` | Lista contas, opcionalmente por `ACTIVE` ou `ARCHIVED`. |
 | `GET` | `/api/v1/accounts/default` | Retorna a conta padrão do usuário. |
 | `GET` | `/api/v1/accounts/{id}` | Retorna uma conta do usuário. |
+| `PUT` | `/api/v1/accounts/{id}/default` | Define uma conta ativa como padrão e retorna a conta atualizada. |
 | `PATCH` | `/api/v1/accounts/{id}` | Renomeia usando `{"name":"Novo nome"}`. |
 | `DELETE` | `/api/v1/accounts/{id}` | Arquiva de forma idempotente e retorna `204`. |
 | `GET` | `/api/v1/accounts/{id}/balance` | Retorna saldos confirmado, pendente e projetado. |

@@ -20,6 +20,8 @@ public interface FinanceOutPort {
 
     Account saveAccountWithOpeningBalance(Account account, FinancialEntry openingEntry);
 
+    Account saveDefaultAccount(Account account);
+
     Optional<Account> findAccount(UUID userId, UUID accountId);
 
     Optional<Account> findDefaultAccount(UUID userId);

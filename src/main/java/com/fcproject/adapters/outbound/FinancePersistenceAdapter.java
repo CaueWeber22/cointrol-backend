@@ -68,6 +68,23 @@ public class FinancePersistenceAdapter implements FinanceOutPort {
     }
 
     @Override
+    public Account saveDefaultAccount(Account account) {
+        return Objects.requireNonNull(writeTransactions.execute(status -> {
+            accounts.findByUserIdAndDefaultAccountTrue(account.userId())
+                    .filter(current -> !current.getId().equals(account.id()))
+                    .ifPresent(current -> {
+                        accounts.save(new AccountEntity(
+                                current.getId(), current.getUserId(), current.getName(), current.getType(),
+                                current.getCurrency(), current.getStatus(), false, current.getVersion(),
+                                current.getCreatedAt(), account.updatedAt()
+                        ));
+                        accounts.flush();
+                    });
+            return toDomain(accounts.save(toEntity(account)));
+        }));
+    }
+
+    @Override
     public Optional<Account> findAccount(UUID userId, UUID accountId) {
         return accounts.findByIdAndUserId(accountId, userId).map(this::toDomain);
     }

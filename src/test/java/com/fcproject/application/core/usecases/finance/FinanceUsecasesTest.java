@@ -35,6 +35,7 @@ import com.fcproject.application.core.usecases.finance.accounts.GetAccountBalanc
 import com.fcproject.application.core.usecases.finance.accounts.GetDefaultAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.GetAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.ListAccountsUsecase;
+import com.fcproject.application.core.usecases.finance.accounts.SetDefaultAccountUsecase;
 import com.fcproject.application.core.usecases.finance.accounts.UpdateAccountUsecase;
 import com.fcproject.application.core.usecases.finance.categories.ArchiveCategoryUsecase;
 import com.fcproject.application.core.usecases.finance.categories.CreateCategoryUsecase;
@@ -221,6 +222,37 @@ class FinanceUsecasesTest {
         when(finance.findDefaultAccount(USER_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.getDefaultAccount(USER_ID));
+    }
+
+    @Test
+    void setsDefaultAccount() {
+        Account target = account(SECOND_ACCOUNT_ID, "Reserva", "BRL", ResourceStatus.ACTIVE);
+        when(finance.findAccount(USER_ID, SECOND_ACCOUNT_ID)).thenReturn(Optional.of(target));
+        when(finance.saveDefaultAccount(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Account updated = service.setDefaultAccount(USER_ID, SECOND_ACCOUNT_ID);
+
+        assertEquals(SECOND_ACCOUNT_ID, updated.id());
+        assertTrue(updated.defaultAccount());
+        assertEquals(NOW, updated.updatedAt());
+    }
+
+    @Test
+    void settingCurrentDefaultAccountIsIdempotent() {
+        Account current = account(ACCOUNT_ID, "Principal", "BRL", ResourceStatus.ACTIVE);
+        when(finance.findAccount(USER_ID, ACCOUNT_ID)).thenReturn(Optional.of(current));
+
+        assertEquals(current, service.setDefaultAccount(USER_ID, ACCOUNT_ID));
+        verify(finance, never()).saveDefaultAccount(any());
+    }
+
+    @Test
+    void rejectsArchivedDefaultAccount() {
+        when(finance.findAccount(USER_ID, SECOND_ACCOUNT_ID))
+                .thenReturn(Optional.of(account(SECOND_ACCOUNT_ID, "Reserva", "BRL", ResourceStatus.ARCHIVED)));
+
+        assertThrows(BusinessConflictException.class, () -> service.setDefaultAccount(USER_ID, SECOND_ACCOUNT_ID));
+        verify(finance, never()).saveDefaultAccount(any());
     }
 
     @Test
@@ -549,6 +581,7 @@ class FinanceUsecasesTest {
         private final ListAccountsUsecase listAccounts;
         private final GetAccountUsecase getAccount;
         private final GetDefaultAccountUsecase getDefaultAccount;
+        private final SetDefaultAccountUsecase setDefaultAccount;
         private final UpdateAccountUsecase updateAccount;
         private final ArchiveAccountUsecase archiveAccount;
         private final GetAccountBalanceUsecase getAccountBalance;
@@ -573,6 +606,7 @@ class FinanceUsecasesTest {
             this.listAccounts = new ListAccountsUsecase(finance);
             this.getAccount = new GetAccountUsecase(finance);
             this.getDefaultAccount = new GetDefaultAccountUsecase(finance);
+            this.setDefaultAccount = new SetDefaultAccountUsecase(finance, clock);
             this.updateAccount = new UpdateAccountUsecase(finance, clock);
             this.archiveAccount = new ArchiveAccountUsecase(finance, clock);
             this.getAccountBalance = new GetAccountBalanceUsecase(finance);
@@ -611,6 +645,11 @@ class FinanceUsecasesTest {
         @Override
         public Account getDefaultAccount(UUID userId) {
             return getDefaultAccount.getDefaultAccount(userId);
+        }
+
+        @Override
+        public Account setDefaultAccount(UUID userId, UUID accountId) {
+            return setDefaultAccount.setDefaultAccount(userId, accountId);
         }
 
         @Override

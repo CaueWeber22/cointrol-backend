@@ -65,7 +65,8 @@ class FinanceControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         mockMvc = standaloneSetup(
-                new AccountController(finance, finance, finance, finance, finance, finance, finance, currentUser),
+                new AccountController(finance, finance, finance, finance, finance, finance, finance, finance,
+                        currentUser),
                 new CategoryController(finance, finance, finance, finance, currentUser),
                 new TransactionController(finance, finance, finance, finance, finance, currentUser),
                 new TransferController(finance, finance, finance, currentUser)
@@ -130,6 +131,21 @@ class FinanceControllerTest {
         mockMvc.perform(get("/api/v1/accounts/default").principal(PRINCIPAL))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(ACCOUNT_ID.toString()))
+                .andExpect(jsonPath("$.defaultAccount").value(true));
+    }
+
+    @Test
+    void setsDefaultAccount() throws Exception {
+        when(finance.setDefaultAccount(USER_ID, SECOND_ACCOUNT_ID)).thenReturn(new Account(
+                SECOND_ACCOUNT_ID, USER_ID, "Reserva", AccountType.SAVINGS, "BRL",
+                ResourceStatus.ACTIVE, true, 0, NOW, NOW
+        ));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .put("/api/v1/accounts/{id}/default", SECOND_ACCOUNT_ID)
+                        .principal(PRINCIPAL))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(SECOND_ACCOUNT_ID.toString()))
                 .andExpect(jsonPath("$.defaultAccount").value(true));
     }
 
