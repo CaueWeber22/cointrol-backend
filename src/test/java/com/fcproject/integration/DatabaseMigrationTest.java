@@ -7,8 +7,10 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.sql.DriverManager;
+import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Testcontainers(disabledWithoutDocker = true)
 class DatabaseMigrationTest {
@@ -27,7 +29,7 @@ class DatabaseMigrationTest {
                 .createSchemas(true)
                 .load();
 
-        assertEquals(13, flyway.migrate().migrationsExecuted);
+        assertEquals(14, flyway.migrate().migrationsExecuted);
 
         try (var connection = DriverManager.getConnection(
                 POSTGRES.getJdbcUrl(),
@@ -111,6 +113,57 @@ class DatabaseMigrationTest {
                 securityTables.next();
                 assertEquals(2, securityTables.getInt(1));
             }
+            statement.executeUpdate("""
+                    insert into access.users (
+                        id, first_name, last_name, email, phone_number, gender, date_of_birth,
+                        password_hash, created_at, updated_at
+                    ) values (
+                        '10000000-0000-0000-0000-000000000001', 'Ada', 'Lovelace',
+                        'ada@example.com', '+5511999999999', 'FEMALE', '1990-01-01',
+                        'hash', now(), now()
+                    )
+                    """);
+            statement.executeUpdate("""
+                    insert into finance.accounts (
+                        id, user_id, name, type, currency, status, created_at, updated_at
+                    ) values (
+                        '20000000-0000-0000-0000-000000000001',
+                        '10000000-0000-0000-0000-000000000001',
+                        'Principal', 'CHECKING', 'BRL', 'ACTIVE', now(), now()
+                    )
+                    """);
+            statement.executeUpdate("""
+                    insert into finance.categories (
+                        id, user_id, name, kind, status, created_at, updated_at
+                    ) values (
+                        '30000000-0000-0000-0000-000000000001',
+                        '10000000-0000-0000-0000-000000000001',
+                        'Salario', 'INCOME', 'ACTIVE', now(), now()
+                    )
+                    """);
+            statement.executeUpdate("""
+                    insert into finance.financial_entries (
+                        id, user_id, account_id, type, amount, status, effective_date,
+                        created_at, updated_at
+                    ) values (
+                        '40000000-0000-0000-0000-000000000001',
+                        '10000000-0000-0000-0000-000000000001',
+                        '20000000-0000-0000-0000-000000000001',
+                        'OPENING_BALANCE', 0, 'CLEARED', '2026-08-16', now(), now()
+                    )
+                    """);
+            assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                    insert into finance.financial_entries (
+                        id, user_id, account_id, category_id, type, amount, status, effective_date,
+                        created_at, updated_at
+                    ) values (
+                        '40000000-0000-0000-0000-000000000002',
+                        '10000000-0000-0000-0000-000000000001',
+                        '20000000-0000-0000-0000-000000000001',
+                        '30000000-0000-0000-0000-000000000001',
+                        'INCOME', 0, 'CLEARED', '2026-08-16', now(), now()
+                    )
+                    """));
         }
     }
 }

@@ -23,6 +23,7 @@ O schema `access` contém identidade e sessões. O schema `finance` contém cont
 | V11 | `src/main/resources/db/migration/V11__add_security_controls.sql` | Cria proteção persistente de login e auditoria de eventos de segurança. |
 | V12 | `src/main/resources/db/migration/V12__add_default_category_metadata.sql` | Adiciona origem/chave canônica às categorias e cria categorias padrão por usuário sem duplicar nome/tipo ativo. |
 | V13 | `src/main/resources/db/migration/V13__add_default_account.sql` | Adiciona marcação de conta padrão e backfill da primeira conta de cada usuário. |
+| V14 | `src/main/resources/db/migration/V14__allow_zero_opening_balance.sql` | Permite valor zero somente para lançamento de saldo inicial. |
 
 O Flyway mantém `access.flyway_schema_history` e aplica cada versão uma única vez.
 
@@ -128,7 +129,7 @@ erDiagram
 
 ## Integridade financeira
 
-- Valores usam `NUMERIC(19,4)` e precisam ser positivos.
+- Valores usam `NUMERIC(19,4)`: lançamentos comuns e transferências precisam ser positivos; saldo inicial pode ser zero.
 - O tipo determina se o lançamento soma ou subtrai do saldo.
 - Não existe coluna materializada de saldo.
 - FKs compostas por recurso e `user_id` impedem vínculos entre proprietários diferentes.
@@ -198,7 +199,7 @@ Essa migration não foi automatizada porque o repositório não informa se exist
 
 ## Teste automatizado
 
-`DatabaseMigrationTest` cria um PostgreSQL 17 vazio, aplica as treze migrations e valida tabelas, papéis, FKs, controles de segurança, colunas de cancelamento, metadados de categoria, conta padrão e o tipo de `accounts.currency` nos schemas `access` e `finance`.
+`DatabaseMigrationTest` cria um PostgreSQL 17 vazio, aplica as migrations e valida tabelas, papéis, FKs, controles de segurança, colunas de cancelamento, metadados de categoria, conta padrão, o tipo de `accounts.currency` e a regra de saldo inicial zero nos schemas `access` e `finance`.
 
 ```powershell
 docker info
